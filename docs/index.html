@@ -7,241 +7,805 @@
 <meta name="description" content="Teka-Teki Silang interaktif tentang Khulafaur Rasyidin dan Peradaban Islam. Dilengkapi timer, skor, hint, dan cek jawaban otomatis.">
 <meta name="theme-color" content="#292524">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☪</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['IBM Plex Sans','system-ui','sans-serif'],mono:['JetBrains Mono','monospace']}}}}</script>
 <style>
-  * { -webkit-tap-highlight-color: transparent; }
-  input { -webkit-appearance: none; border-radius: 0; }
-  .grid-scroll::-webkit-scrollbar { height: 4px; }
-  .grid-scroll::-webkit-scrollbar-thumb { background: #a8a29e; border-radius: 2px; }
-  @media print { .no-print { display: none !important; } }
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+input{-webkit-appearance:none;border-radius:0}
+input:focus{outline:2px solid #0284c7;outline-offset:-2px;z-index:5}
+.grid-wrap::-webkit-scrollbar{height:4px}
+.grid-wrap::-webkit-scrollbar-thumb{background:#a8a29e;border-radius:2px}
+.clue-list::-webkit-scrollbar{width:3px}
+.clue-list::-webkit-scrollbar-thumb{background:#d6d3d1;border-radius:2px}
+@media print{.no-print{display:none!important}}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pop{animation:pop .3s ease}.fade{animation:fadeIn .25s ease}
+.spinner{width:18px;height:18px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+.c-ok{background:#d1fae5!important;border-color:#059669!important}
+.c-err{background:#fee2e2!important;border-color:#dc2626!important}
+.c-hint{background:#fef3c7!important;border-color:#d97706!important}
+.c-sel{background:#e0f2fe!important;border-color:#0284c7!important}
+.c-cur{background:#bae6fd!important;border-color:#0369a1!important}
+.overlay{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.name-input{border:none;border-bottom:2px solid #d6d3d1;background:transparent;padding:6px 2px;font-size:16px;width:100%;transition:border-color .2s}
+.name-input:focus{outline:none;border-bottom-color:#0284c7}
 </style>
 </head>
-<body>
+<body class="font-sans">
 <div id="root"></div>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
+const{useState,useEffect,useRef,useMemo,useCallback}=React;
 
-const RAW={"p1":{"r":20,"c":25,"w":[[2,"BAIAT","Sumpah setia dan pengakuan formal terhadap seorang pemimpin",1,2,1],[3,"FITNA","Kekacauan atau perang saudara dalam komunitas Muslim",1,8,1],[5,"QADHI","Hakim dalam sistem hukum Islam",2,2,1],[6,"KHUMUS","Seperlima dari rampasan perang yang diserahkan kepada negara",2,9,1],[9,"NAHJUL","Kompilasi khotbah dan surat Ali: ___ Balaghah",4,3,1],[13,"HIJRIAH","Kalender lunar Islam yang ditetapkan Umar",5,4,1],[14,"IMAMAH","Doktrin Syiah tentang kepemimpinan ilahi",5,14,1],[15,"IJTIHAD","Penalaran independen untuk merumuskan hukum syariat",6,5,1],[18,"WALI","Gubernur provinsi yang ditunjuk oleh khalifah",7,0,1],[20,"QADISIYYAH","Pertempuran besar melawan Sassanid Persia (636 M)",8,5,1],[24,"DIWAN","Register resmi negara untuk distribusi tunjangan",9,20,1],[25,"UMMAH","Komunitas Muslim secara keseluruhan",10,0,1],[27,"SUNNAH","Preseden dan praktik Nabi; sumber hukum Islam kedua",10,17,1],[29,"YARMOUK","Pertempuran pembuka penguasaan Muslim atas Suriah",11,17,1],[30,"DHIMMI","Non-Muslim di bawah perlindungan negara Islam",12,4,1],[32,"KHAWARIJ","Kelompok pemisah dari Ali setelah Arbitrase Shiffin",12,11,1],[34,"SHIFFIN","Pertempuran Ali vs Muawiyah di tepi Eufrat",14,12,1],[36,"JIZYA","Pajak per kapita oleh pria dewasa non-Muslim",15,1,1],[38,"HAFIZ","Penghafal seluruh Al-Quran",15,7,1],[39,"USHR","Bea cukai di pos-pos perbatasan negara Islam",17,14,1],[40,"SAWAD","Wilayah subur antara Sungai Tigris dan Eufrat",18,2,1],[1,"RIDDAH","Kemurtadan/pembangkangan politis terhadap Madinah",0,4,0],[4,"AMSHAR","Kota-kota garnisun di wilayah taklukan",1,12,0],[7,"SAQIFAH","Tempat bai'at pertama kepada Abu Bakar",2,14,0],[8,"MAWALI","Muslim non-Arab, umumnya mantan budak",2,16,0],[10,"KHALIFAH","Jabatan kepala negara Islam pasca-Nabi SAW",4,10,0],[11,"WAQAF","Aset sedekah permanen untuk kepentingan umum",4,18,0],[12,"SHURA","Prinsip musyawarah kolektif dalam Islam",4,19,0],[16,"GHANIMAH","Rampasan perang pasukan Muslim",6,13,0],[17,"MUAWIYAH","Gubernur Suriah yang menolak tunduk kepada Ali",6,15,0],[19,"IJMA","Konsensus ulama; sumber hukum Islam ketiga",7,3,0],[21,"SYARIAT","Hukum Islam dari Al-Quran dan Sunnah",8,9,0],[22,"RASYIDIN","Sebutan empat khalifah pertama",8,17,0],[23,"TAHKIM","Arbitrase setelah Pertempuran Shiffin",8,23,0],[26,"HUDUD","Hukuman tetap yang ditetapkan Al-Quran",10,4,0],[28,"KHARAJ","Pajak tanah pertanian wilayah taklukan",11,5,0],[31,"MUSHAF","Al-Quran dalam bentuk tertulis terjilid",12,7,0],[33,"JAMAL","Pertempuran di Basra; unta Aisyah",14,8,0],[35,"FIQH","Yurisprudensi Islam; ilmu hukum syariat",14,16,0],[37,"ZAKAT","Kewajiban fiskal; salah satu Rukun Islam",15,3,0]]},"p2":{"r":29,"c":27,"w":[[1,"IKHWAN","Persaudaraan; ukhuwah Islamiyah",0,16,1],[4,"ZELLIGE","Seni mosaik keramik geometris Maroko",1,18,1],[5,"OTTOMAN","Kekaisaran Islam terakhir, tiga benua",3,15,1],[7,"ASTROLABE","Instrumen astronomi ilmuwan Muslim",6,17,1],[8,"ALJABAR","Matematika oleh Al-Khawarizmi",7,20,1],[9,"TARIQAH","Jalan spiritual; ordo sufi",8,14,1],[10,"HAMMAM","Pemandian umum khas peradaban Islam",9,0,1],[13,"MASJID","Tempat ibadah utama umat Islam",10,4,1],[14,"ALGORITMA","Prosedur komputasi dari Al-Khawarizmi",10,13,1],[17,"MIHRAB","Ceruk masjid penunjuk arah kiblat",12,8,1],[18,"ANDALUSIA","Wilayah Islam di Semenanjung Iberia",13,5,1],[19,"TASAWUF","Dimensi spiritual-mistis Islam",14,11,1],[20,"BIMARISTAN","Rumah sakit Islam abad pertengahan",15,8,1],[21,"ARABESQUE","Seni dekoratif pola geometris Islam",17,11,1],[23,"FALAK","Ilmu astronomi Islam; waktu shalat & kiblat",19,4,1],[26,"KAIROUAN","Kota suci keempat Islam di Tunisia",22,4,1],[28,"BAITUL","Pusat riset Baghdad: ___ Hikmah",25,9,1],[2,"ALHAMBRA","Istana Islam megah di Granada, Spanyol",0,20,0],[3,"RIHLA","Tradisi perjalanan ilmiah; Ibnu Battuta",0,22,0],[6,"KALIGRAFI","Seni menulis indah huruf Arab",5,17,0],[11,"MADRASAH","Lembaga pendidikan Islam formal",9,5,0],[12,"UMAYYAH","Dinasti Islam pertama di Damaskus",9,20,0],[14,"ABBASIYAH","Dinasti Baghdad pusat keilmuan dunia",10,13,0],[15,"AVERROES","Ibnu Rusyd; komentator Aristoteles",10,21,0],[16,"MINARET","Menara masjid untuk adzan",11,6,0],[21,"AVICENNA","Ibnu Sina; bapak kedokteran Islam",17,11,0],[22,"WAZIR","Perdana menteri khalifah/sultan",18,7,0],[24,"ALHAZEN","Ibnu Haitham; bapak optika modern",19,5,0],[25,"MUQARNAS","Ornamen sarang lebah 3D Islam",19,10,0],[27,"SULTAN","Gelar penguasa pasca-kekhalifahan",23,14,0]]}};
+/* ═══════════════════════════════════════════════════════
+   KONFIGURASI — Ganti URL ini dengan URL Apps Script Anda
+   ═══════════════════════════════════════════════════════ */
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNnJNNk-_efhtZ1xgNbqE-ntoTfnoYeHTJ8yXee6Wrkws74ON7iax4daBP6DQTQ-GSNA/exec";
+// Contoh: "https://script.google.com/macros/s/AKfycbx.../exec"
+// Kosongkan ("") untuk mode offline tanpa Google Sheets
+
+/* ═══════════════════════════════════════════════════════ */
+const d13=s=>s.replace(/[A-Z]/g,c=>String.fromCharCode((c.charCodeAt(0)-65+13)%26+65));
+
+const ENC={"p1": {"r": 20, "c": 25, "w": [[2, "ONVNG", "Sumpah setia dan pengakuan formal terhadap seorang pemimpin", 1, 2, 1], [3, "SVGAN", "Kekacauan atau perang saudara dalam komunitas Muslim", 1, 8, 1], [5, "DNQUV", "Hakim dalam sistem hukum Islam", 2, 2, 1], [6, "XUHZHF", "Seperlima dari rampasan perang yang diserahkan kepada negara", 2, 9, 1], [9, "ANUWHY", "Kompilasi khotbah dan surat Ali: ___ Balaghah", 4, 3, 1], [13, "UVWEVNU", "Kalender lunar Islam yang ditetapkan Umar", 5, 4, 1], [14, "VZNZNU", "Doktrin Syiah tentang kepemimpinan ilahi", 5, 14, 1], [15, "VWGVUNQ", "Penalaran independen untuk merumuskan hukum syariat", 6, 5, 1], [18, "JNYV", "Gubernur provinsi yang ditunjuk oleh khalifah", 7, 0, 1], [20, "DNQVFVLLNU", "Pertempuran besar melawan Sassanid Persia (636 M)", 8, 5, 1], [24, "QVJNA", "Register resmi negara untuk distribusi tunjangan", 9, 20, 1], [25, "HZZNU", "Komunitas Muslim secara keseluruhan", 10, 0, 1], [27, "FHAANU", "Preseden dan praktik Nabi; sumber hukum Islam kedua", 10, 17, 1], [29, "LNEZBHX", "Pertempuran pembuka penguasaan Muslim atas Suriah", 11, 17, 1], [30, "QUVZZV", "Non-Muslim di bawah perlindungan negara Islam", 12, 4, 1], [32, "XUNJNEVW", "Kelompok pemisah dari Ali setelah Arbitrase Shiffin", 12, 11, 1], [34, "FUVSSVA", "Pertempuran Ali vs Muawiyah di tepi Eufrat", 14, 12, 1], [36, "WVMLN", "Pajak per kapita oleh pria dewasa non-Muslim", 15, 1, 1], [38, "UNSVM", "Penghafal seluruh Al-Quran", 15, 7, 1], [39, "HFUE", "Bea cukai di pos-pos perbatasan negara Islam", 17, 14, 1], [40, "FNJNQ", "Wilayah subur antara Sungai Tigris dan Eufrat", 18, 2, 1], [1, "EVQQNU", "Kemurtadan/pembangkangan politis terhadap Madinah", 0, 4, 0], [4, "NZFUNE", "Kota-kota garnisun di wilayah taklukan", 1, 12, 0], [7, "FNDVSNU", "Tempat bai'at pertama kepada Abu Bakar", 2, 14, 0], [8, "ZNJNYV", "Muslim non-Arab, umumnya mantan budak", 2, 16, 0], [10, "XUNYVSNU", "Jabatan kepala negara Islam pasca-Nabi SAW", 4, 10, 0], [11, "JNDNS", "Aset sedekah permanen untuk kepentingan umum", 4, 18, 0], [12, "FUHEN", "Prinsip musyawarah kolektif dalam Islam", 4, 19, 0], [16, "TUNAVZNU", "Rampasan perang pasukan Muslim", 6, 13, 0], [17, "ZHNJVLNU", "Gubernur Suriah yang menolak tunduk kepada Ali", 6, 15, 0], [19, "VWZN", "Konsensus ulama; sumber hukum Islam ketiga", 7, 3, 0], [21, "FLNEVNG", "Hukum Islam dari Al-Quran dan Sunnah", 8, 9, 0], [22, "ENFLVQVA", "Sebutan empat khalifah pertama", 8, 17, 0], [23, "GNUXVZ", "Arbitrase setelah Pertempuran Shiffin", 8, 23, 0], [26, "UHQHQ", "Hukuman tetap yang ditetapkan Al-Quran", 10, 4, 0], [28, "XUNENW", "Pajak tanah pertanian wilayah taklukan", 11, 5, 0], [31, "ZHFUNS", "Al-Quran dalam bentuk tertulis terjilid", 12, 7, 0], [33, "WNZNY", "Pertempuran di Basra; unta Aisyah", 14, 8, 0], [35, "SVDU", "Yurisprudensi Islam; ilmu hukum syariat", 14, 16, 0], [37, "MNXNG", "Kewajiban fiskal; salah satu Rukun Islam", 15, 3, 0]]}, "p2": {"r": 29, "c": 27, "w": [[1, "VXUJNA", "Persaudaraan; ukhuwah Islamiyah", 0, 16, 1], [4, "MRYYVTR", "Seni mosaik keramik geometris Maroko", 1, 18, 1], [5, "BGGBZNA", "Kekaisaran Islam terakhir, tiga benua", 3, 15, 1], [7, "NFGEBYNOR", "Instrumen astronomi ilmuwan Muslim", 6, 17, 1], [8, "NYWNONE", "Matematika oleh Al-Khawarizmi", 7, 20, 1], [9, "GNEVDNU", "Jalan spiritual; ordo sufi", 8, 14, 1], [10, "UNZZNZ", "Pemandian umum khas peradaban Islam", 9, 0, 1], [13, "ZNFWVQ", "Tempat ibadah utama umat Islam", 10, 4, 1], [14, "NYTBEVGZN", "Prosedur komputasi dari Al-Khawarizmi", 10, 13, 1], [17, "ZVUENO", "Ceruk masjid penunjuk arah kiblat", 12, 8, 1], [18, "NAQNYHFVN", "Wilayah Islam di Semenanjung Iberia", 13, 5, 1], [19, "GNFNJHS", "Dimensi spiritual-mistis Islam", 14, 11, 1], [20, "OVZNEVFGNA", "Rumah sakit Islam abad pertengahan", 15, 8, 1], [21, "NENORFDHR", "Seni dekoratif pola geometris Islam", 17, 11, 1], [23, "SNYNX", "Ilmu astronomi Islam; waktu shalat & kiblat", 19, 4, 1], [26, "XNVEBHNA", "Kota suci keempat Islam di Tunisia", 22, 4, 1], [28, "ONVGHY", "Pusat riset Baghdad: ___ Hikmah", 25, 9, 1], [2, "NYUNZOEN", "Istana Islam megah di Granada, Spanyol", 0, 20, 0], [3, "EVUYN", "Tradisi perjalanan ilmiah; Ibnu Battuta", 0, 22, 0], [6, "XNYVTENSV", "Seni menulis indah huruf Arab", 5, 17, 0], [11, "ZNQENFNU", "Lembaga pendidikan Islam formal", 9, 5, 0], [12, "HZNLLNU", "Dinasti Islam pertama di Damaskus", 9, 20, 0], [14, "NOONFVLNU", "Dinasti Baghdad pusat keilmuan dunia", 10, 13, 0], [15, "NIREEBRF", "Ibnu Rusyd; komentator Aristoteles", 10, 21, 0], [16, "ZVANERG", "Menara masjid untuk adzan", 11, 6, 0], [21, "NIVPRAAN", "Ibnu Sina; bapak kedokteran Islam", 17, 11, 0], [22, "JNMVE", "Perdana menteri khalifah/sultan", 18, 7, 0], [24, "NYUNMRA", "Ibnu Haitham; bapak optika modern", 19, 5, 0], [25, "ZHDNEANF", "Ornamen sarang lebah 3D Islam", 19, 10, 0], [27, "FHYGNA", "Gelar penguasa pasca-kekhalifahan", 23, 14, 0]]}};
 
 function parse(p){
-  const g=Array.from({length:p.r},()=>Array.from({length:p.c},()=>({l:"",n:0,a:false})));
-  const ws=p.w.map(([n,w,cl,row,col,isA])=>{
-    const d=isA?"across":"down";
-    for(let i=0;i<w.length;i++){
-      const r=d==="across"?row:row+i,c=d==="across"?col+i:col;
-      if(r<p.r&&c<p.c){g[r][c].l=w[i];g[r][c].a=true;if(i===0)g[r][c].n=n}
+  const grid=Array.from({length:p.r},()=>Array.from({length:p.c},()=>({l:"",n:0,a:false})));
+  const c2w={};
+  const words=p.w.map(([num,enc,clue,row,col,isA],idx)=>{
+    const word=d13(enc.toUpperCase());
+    const dir=isA?"across":"down";
+    for(let i=0;i<word.length;i++){
+      const r=dir==="across"?row:row+i, c=dir==="across"?col+i:col;
+      if(r<p.r&&c<p.c){
+        grid[r][c].l=word[i]; grid[r][c].a=true;
+        if(i===0) grid[r][c].n=num;
+        const k=`${r}-${c}`;
+        if(!c2w[k]) c2w[k]=[];
+        c2w[k].push({idx,dir});
+      }
     }
-    return{n,w,cl,row,col,d}
+    return{num,word,clue,row,col,dir,len:word.length};
   });
-  return{g,R:p.r,C:p.c,ws,ac:ws.filter(x=>x.d==="across").sort((a,b)=>a.n-b.n),dn:ws.filter(x=>x.d==="down").sort((a,b)=>a.n-b.n)}
+  return{grid,R:p.r,C:p.c,words,c2w,
+    ac:words.filter(w=>w.dir==="across").sort((a,b)=>a.num-b.num),
+    dn:words.filter(w=>w.dir==="down").sort((a,b)=>a.num-b.num)};
 }
 
 const PZ={
-  1:{...parse(RAW.p1),title:"TTS I — Khulafaur Rasyidin",sub:"Politik, Hukum, Militer & Ekonomi"},
-  2:{...parse(RAW.p2),title:"TTS II — Peradaban Islam",sub:"Ilmu Pengetahuan, Seni & Arsitektur"}
+  1:{...parse(ENC.p1),title:"TTS I — Khulafaur Rasyidin",sub:"Politik, Hukum, Militer & Ekonomi",label:"TTS I"},
+  2:{...parse(ENC.p2),title:"TTS II — Peradaban Islam",sub:"Ilmu Pengetahuan, Seni & Arsitektur",label:"TTS II"}
 };
 
 const fmt=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+const getCells=w=>{const out=[];for(let i=0;i<w.word.length;i++){const r=w.dir==="across"?w.row:w.row+i;const c=w.dir==="across"?w.col+i:w.col;out.push({r,c,k:`${r}-${c}`,l:w.word[i]})}return out};
+const wkey=w=>w.num+"-"+w.dir;
 
+/* ═══════ GOOGLE SHEETS API ═══════ */
+async function submitScore(data){
+  if(!SCRIPT_URL) return{success:false,error:"offline"};
+  try{
+    const res=await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify(data),headers:{"Content-Type":"text/plain"}});
+    return await res.json();
+  }catch(e){return{success:false,error:e.message}}
+}
+
+async function fetchLeaderboard(puzzle){
+  if(!SCRIPT_URL) return{success:false,error:"offline"};
+  try{
+    const url=puzzle?`${SCRIPT_URL}?puzzle=${encodeURIComponent(puzzle)}&limit=20`:`${SCRIPT_URL}?limit=20`;
+    const res=await fetch(url);
+    return await res.json();
+  }catch(e){return{success:false,error:e.message}}
+}
+
+/* ═══════ MAIN APP ═══════ */
 function App(){
+  // Screen: "login" | "home" | "puzzle" | "leaderboard"
+  const[screen,setScreen]=useState("login");
+  const[nama,setNama]=useState("");
+  const[nim,setNim]=useState("");
+
   const[pid,setPid]=useState(null);
-  const[ug,setUg]=useState({});
-  const[sec,setSec]=useState(0);
-  const[on,setOn]=useState(false);
-  const[sc,setSc]=useState(0);
-  const[sv,setSv]=useState(new Set());
-  const[ht,setHt]=useState(new Set());
-  const[sw,setSw]=useState(null);
-  const[ck,setCk]=useState({});
+  const[input,setInput]=useState({});
+  const[secs,setSecs]=useState(0);
+  const[running,setRunning]=useState(false);
+  const[paused,setPaused]=useState(false);
+  const[score,setScore]=useState(0);
+  const[solved,setSolved]=useState(new Set());
+  const[hinted,setHinted]=useState(new Set());
+  const[active,setActive]=useState(null);
+  const[cursor,setCursor]=useState(null);
+  const[cellSt,setCellSt]=useState({});
   const[done,setDone]=useState(false);
-  const rr=useRef({});
-  const tr=useRef(null);
+  const[exitDlg,setExitDlg]=useState(false);
+  const[winW,setWinW]=useState(typeof window!=="undefined"?window.innerWidth:400);
 
-  useEffect(()=>{if(on){tr.current=setInterval(()=>setSec(t=>t+1),1000)}return()=>clearInterval(tr.current)},[on]);
+  // Submission state
+  const[submitting,setSubmitting]=useState(false);
+  const[submitResult,setSubmitResult]=useState(null);
+  const[submitted,setSubmitted]=useState(false);
 
-  const go=(id)=>{
-    const p=PZ[id];const u={};
-    for(let r=0;r<p.R;r++)for(let c=0;c<p.C;c++)if(p.g[r][c].a)u[`${r}-${c}`]="";
-    setPid(id);setUg(u);setSec(0);setOn(true);setSc(0);setSv(new Set());setHt(new Set());setSw(null);setCk({});setDone(false);
-  };
+  // Leaderboard state
+  const[lbData,setLbData]=useState(null);
+  const[lbLoading,setLbLoading]=useState(false);
+  const[lbPuzzle,setLbPuzzle]=useState(null);
+  // Setup guide screen
+  const[showSetup,setShowSetup]=useState(false);
+
+  const refs=useRef({});
+  const tRef=useRef(null);
 
   const pz=pid?PZ[pid]:null;
-  const tot=pz?pz.ws.length:0;
+  const total=pz?pz.words.length:0;
 
-  const cells=(w)=>{
-    const c=[];
-    for(let i=0;i<w.w.length;i++){
-      const r=w.d==="across"?w.row:w.row+i,co=w.d==="across"?w.col+i:w.col;
-      c.push({r,c:co,k:`${r}-${co}`,l:w.w[i]})
+  useEffect(()=>{
+    if(running&&!paused) tRef.current=setInterval(()=>setSecs(t=>t+1),1000);
+    return()=>clearInterval(tRef.current);
+  },[running,paused]);
+
+  useEffect(()=>{
+    const h=()=>setWinW(window.innerWidth);
+    window.addEventListener("resize",h);
+    return()=>window.removeEventListener("resize",h);
+  },[]);
+
+  const selSet=useMemo(()=>{
+    if(!active) return new Set();
+    return new Set(getCells(active).map(c=>c.k));
+  },[active]);
+
+  const start=useCallback(id=>{
+    const p=PZ[id]; const u={};
+    for(let r=0;r<p.R;r++) for(let c=0;c<p.C;c++) if(p.grid[r][c].a) u[`${r}-${c}`]="";
+    setPid(id); setInput(u); setSecs(0); setRunning(true); setPaused(false);
+    setScore(0); setSolved(new Set()); setHinted(new Set());
+    setActive(null); setCursor(null); setCellSt({}); setDone(false); setExitDlg(false);
+    setSubmitting(false); setSubmitResult(null); setSubmitted(false);
+    setScreen("puzzle");
+  },[]);
+
+  const tryExit=useCallback(()=>{
+    if(solved.size>0&&!done){setPaused(true);setExitDlg(true)}
+    else{setScreen("home");setRunning(false);setPid(null)}
+  },[solved,done]);
+
+  const doExit=useCallback(()=>{setScreen("home");setRunning(false);setPid(null);setExitDlg(false)},[]);
+
+  const pickWord=useCallback((r,c)=>{
+    if(!pz) return;
+    const k=`${r}-${c}`;const here=pz.c2w[k]||[];
+    if(!here.length) return;
+    if(cursor===k&&here.length>1&&active){
+      const other=here.find(e=>e.dir!==active.dir);
+      if(other){setActive(pz.words[other.idx]);return}
     }
-    return c
-  };
+    let pick=active?here.find(e=>e.dir===active.dir):null;
+    if(!pick) pick=here[0];
+    setActive(pz.words[pick.idx]);setCursor(k);
+  },[pz,cursor,active]);
 
-  const chk=(w)=>{
-    const cs=cells(w);let ok=true;const nc={...ck};
-    cs.forEach(({k,l})=>{if((ug[k]||"")===l)nc[k]="ok";else{nc[k]="err";ok=false}});
-    setCk(nc);
-    if(ok&&!sv.has(w.n)){
-      const ns=new Set(sv);ns.add(w.n);setSv(ns);
-      const base=w.w.length*10;const pen=ht.has(w.n)?Math.floor(base*0.5):0;
-      setSc(s=>s+base-pen);
-      if(ns.size===tot){setOn(false);setDone(true)}
+  const checkWord=useCallback(w=>{
+    const cs=getCells(w);let ok=true;const ns={...cellSt};
+    cs.forEach(({k,l})=>{if((input[k]||"")===l)ns[k]="ok";else{ns[k]="err";ok=false}});
+    setCellSt(ns);
+    const sk=wkey(w);
+    if(ok&&!solved.has(sk)){
+      const nv=new Set(solved);nv.add(sk);setSolved(nv);
+      const base=w.word.length*10;const pen=hinted.has(sk)?Math.floor(base*0.5):0;
+      setScore(s=>s+base-pen);
+      if(nv.size===total){setRunning(false);setDone(true)}
     }
-  };
+  },[cellSt,input,solved,hinted,total]);
 
-  const hint=(w)=>{
-    if(sv.has(w.n))return;
-    for(const{k,l}of cells(w)){
-      if((ug[k]||"")!==l){
-        setUg(p=>({...p,[k]:l}));setCk(p=>({...p,[k]:"hint"}));setHt(p=>new Set(p).add(w.n));return;
+  const giveHint=useCallback(w=>{
+    const sk=wkey(w);if(solved.has(sk))return;
+    for(const{k,l}of getCells(w)){
+      if((input[k]||"")!==l){
+        setInput(p=>({...p,[k]:l}));setCellSt(p=>({...p,[k]:"hint"}));
+        setHinted(p=>new Set(p).add(sk));return;
       }
     }
-  };
+  },[solved,input]);
 
-  const inp=(r,c,val)=>{
+  const onInput=useCallback((r,c,val)=>{
     const v=val.toUpperCase().replace(/[^A-Z]/g,"").slice(-1);
-    setUg(p=>({...p,[`${r}-${c}`]:v}));
-    setCk(p=>{const n={...p};delete n[`${r}-${c}`];return n});
-    if(v&&sw){const cs=cells(sw);const idx=cs.findIndex(x=>x.r===r&&x.c===c);if(idx>=0&&idx<cs.length-1){const nx=cs[idx+1];setTimeout(()=>rr.current[nx.k]?.focus(),20)}}
-  };
-
-  const kd=(e,r,c)=>{
-    if(!sw)return;
-    if(e.key==="Backspace"&&!ug[`${r}-${c}`]){
-      const cs=cells(sw);const i=cs.findIndex(x=>x.r===r&&x.c===c);
-      if(i>0){const pv=cs[i-1];setUg(p=>({...p,[pv.k]:""}));setTimeout(()=>rr.current[pv.k]?.focus(),20)}
-    }
-  };
-
-  const sc2=sw?new Set(cells(sw).map(x=>x.k)):new Set();
-  const cst=(r,c)=>{
     const k=`${r}-${c}`;
-    if(ck[k]==="ok")return"bg-emerald-100 border-emerald-500";
-    if(ck[k]==="err")return"bg-red-50 border-red-400";
-    if(ck[k]==="hint")return"bg-amber-50 border-amber-400";
-    if(sc2.has(k))return"bg-sky-50 border-sky-300";
-    return"bg-white border-gray-300"
-  };
+    setInput(p=>({...p,[k]:v}));setCellSt(p=>{const n={...p};delete n[k];return n});
+    if(v&&active){const cs=getCells(active);const i=cs.findIndex(x=>x.r===r&&x.c===c);
+      if(i>=0&&i<cs.length-1){const nx=cs[i+1];setCursor(nx.k);setTimeout(()=>refs.current[nx.k]?.focus(),20)}}
+  },[active]);
 
-  // HOME
-  if(!pid)return(
+  const onKey=useCallback((e,r,c)=>{
+    if(!active)return;const k=`${r}-${c}`;
+    if(e.key==="Backspace"&&!input[k]){
+      const cs=getCells(active);const i=cs.findIndex(x=>x.r===r&&x.c===c);
+      if(i>0){const pv=cs[i-1];setInput(p=>({...p,[pv.k]:""}));setCursor(pv.k);setTimeout(()=>refs.current[pv.k]?.focus(),20)}
+    }
+  },[active,input]);
+
+  const cellCls=useCallback((r,c)=>{
+    const k=`${r}-${c}`;const s=cellSt[k];
+    if(s==="ok")return"c-ok";if(s==="err")return"c-err";if(s==="hint")return"c-hint";
+    if(cursor===k)return"c-cur";if(selSet.has(k))return"c-sel";
+    return"bg-white border-gray-300";
+  },[cellSt,cursor,selSet]);
+
+  const isCellDone=useCallback(k=>cellSt[k]==="ok"||cellSt[k]==="hint",[cellSt]);
+  const isWDone=useCallback(w=>solved.has(wkey(w)),[solved]);
+
+  // Submit score to Google Sheets
+  const doSubmit=useCallback(async()=>{
+    if(!pz||submitted||submitting) return;
+    setSubmitting(true);
+    const data={
+      nama: nama.trim(),
+      nim: nim.trim(),
+      puzzle: pz.label,
+      skor: score,
+      waktu: fmt(secs),
+      hints: hinted.size,
+      totalKata: total,
+      kataBenar: solved.size
+    };
+    const res=await submitScore(data);
+    setSubmitResult(res);
+    setSubmitting(false);
+    if(res.success) setSubmitted(true);
+  },[pz,nama,nim,score,secs,hinted,total,solved,submitted,submitting]);
+
+  // Fetch leaderboard
+  const openLeaderboard=useCallback(async(puzzleLabel)=>{
+    setScreen("leaderboard");
+    setLbPuzzle(puzzleLabel||null);
+    setLbLoading(true);
+    const res=await fetchLeaderboard(puzzleLabel);
+    setLbData(res.success?res.leaderboard:null);
+    setLbLoading(false);
+  },[]);
+
+  const hasApi=!!SCRIPT_URL;
+
+  /* ════════════════════════════════════════════
+     LOGIN SCREEN — Nama & NIM
+     ════════════════════════════════════════════ */
+  if(screen==="login") return(
     <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
-      <div className="max-w-sm w-full">
+      <div className="max-w-sm w-full fade">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-stone-800 text-white mb-4" style={{fontSize:18,fontFamily:"serif",fontWeight:"bold",letterSpacing:2,lineHeight:1.2}}>
-            <div className="text-center"><div style={{fontSize:11,opacity:0.6}}>☪</div><div>TTS</div></div>
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-stone-800 text-white mb-4 shadow-xl shadow-stone-400/20">
+            <div className="text-center">
+              <div className="text-sm opacity-40 mb-0.5">☪</div>
+              <div className="text-lg font-bold tracking-[3px]">TTS</div>
+            </div>
           </div>
           <h1 className="text-2xl font-bold text-stone-800">Teka-Teki Silang</h1>
           <p className="text-sm text-stone-400 mt-1">Khulafaur Rasyidin & Peradaban Islam</p>
         </div>
-        {[1,2].map(id=>{const p=PZ[id];return(
-          <button key={id} onClick={()=>go(id)} className="w-full mb-3 text-left p-5 bg-white rounded-2xl border border-stone-200 hover:border-stone-400 hover:shadow-lg transition-all active:scale-[0.98]">
-            <div className="flex items-center justify-between">
-              <div><div className="font-bold text-stone-800">{p.title}</div><div className="text-xs text-stone-400 mt-1">{p.sub}</div></div>
-              <div className="text-right"><div className="text-2xl font-bold text-stone-300">{p.ws.length}</div><div className="text-xs text-stone-400">kata</div></div>
+
+        <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm">
+          <p className="text-sm font-semibold text-stone-700 mb-5 text-center">Masukkan Identitas</p>
+          <div className="space-y-5">
+            <div>
+              <label className="text-xs font-medium text-stone-500 uppercase tracking-wider">Nama Lengkap *</label>
+              <input type="text" value={nama} onChange={e=>setNama(e.target.value)}
+                placeholder="Contoh: Ahmad Fauzi"
+                className="name-input mt-1 text-stone-800 font-medium" maxLength={100} autoFocus />
             </div>
-          </button>
-        )})}
-        <div className="mt-6 p-4 bg-white rounded-2xl border border-stone-200">
-          <p className="text-xs font-semibold text-stone-500 mb-3 text-center">Cara Bermain</p>
-          <div className="grid grid-cols-2 gap-3 text-xs text-stone-500">
-            <div className="flex items-start gap-2"><span className="text-base">⏱</span><div><b>Timer</b><br/>Waktu otomatis</div></div>
-            <div className="flex items-start gap-2"><span className="text-base">🏆</span><div><b>Skor</b><br/>Kata × 10 poin</div></div>
-            <div className="flex items-start gap-2"><span className="text-base">💡</span><div><b>Hint</b><br/>Buka 1 huruf (-50%)</div></div>
-            <div className="flex items-start gap-2"><span className="text-base">✓</span><div><b>Cek</b><br/>Periksa per kata</div></div>
+            <div>
+              <label className="text-xs font-medium text-stone-500 uppercase tracking-wider">NIM <span className="text-stone-400">(opsional)</span></label>
+              <input type="text" value={nim} onChange={e=>setNim(e.target.value)}
+                placeholder="Contoh: 2024010123"
+                className="name-input mt-1 text-stone-800" maxLength={30} />
+            </div>
           </div>
+          <button onClick={()=>{if(nama.trim())setScreen("home")}}
+            disabled={!nama.trim()}
+            className={`w-full mt-6 py-3 rounded-xl text-sm font-bold transition-all
+              ${nama.trim()
+                ?"bg-stone-800 text-white hover:bg-stone-700 active:scale-[0.98] shadow-lg shadow-stone-300/30"
+                :"bg-stone-200 text-stone-400 cursor-not-allowed"}`}>
+            Mulai →
+          </button>
         </div>
-        <p className="text-center text-xs text-stone-300 mt-4">v1.0 — 70 istilah sejarah & peradaban Islam</p>
+        <p className="text-center text-xs text-stone-300 mt-6">v2.1 — 70 istilah · Google Sheets integration</p>
       </div>
     </div>
   );
 
-  // PUZZLE
-  const cSz=Math.max(20,Math.min(30,Math.floor((Math.min(window.innerWidth-16,520))/pz.C)));
+  /* ════════════════════════════════════════════
+     SETUP GUIDE SCREEN
+     ════════════════════════════════════════════ */
+  if(showSetup) return(
+    <div className="min-h-screen bg-stone-50 p-4">
+      <div className="max-w-lg mx-auto fade">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={()=>setShowSetup(false)} className="text-sm text-stone-400 hover:text-stone-700">← Kembali</button>
+          <h2 className="text-lg font-bold text-stone-800">🔧 Setup Google Sheets</h2>
+          <div className="w-16"/>
+        </div>
+
+        {hasApi?(
+          <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-5 text-center mb-4">
+            <div className="text-3xl mb-2">✅</div>
+            <div className="font-bold text-emerald-800">Google Sheets Sudah Aktif!</div>
+            <div className="text-xs text-emerald-600 mt-2 break-all font-mono bg-emerald-100 rounded p-2">{SCRIPT_URL.substring(0,60)}...</div>
+          </div>
+        ):(
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 text-center mb-4">
+            <div className="text-3xl mb-2">⚡</div>
+            <div className="font-bold text-amber-800">Belum Terhubung</div>
+            <div className="text-xs text-amber-600 mt-1">Ikuti 4 langkah di bawah untuk mengaktifkan</div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {[
+            {n:1, t:"Buat Google Spreadsheet", icon:"📊", steps:[
+              "Buka sheets.google.com → klik + (Blank)",
+              "Beri judul: Skor TTS Islam",
+              "Klik kanan tab \"Sheet1\" → Rename → ketik Skor",
+              "Isi header baris 1: Timestamp | Nama | NIM | Puzzle | Skor | Waktu | Hint | Total Kata | Kata Benar"
+            ]},
+            {n:2, t:"Buat Apps Script", icon:"📝", steps:[
+              "Di spreadsheet → Extensions → Apps Script",
+              "Hapus kode default (Ctrl+A, Delete)",
+              "Buka file Code.gs dari folder apps-script/",
+              "Copy semua isinya → Paste ke editor Apps Script",
+              "Klik 💾 Save (Ctrl+S)"
+            ]},
+            {n:3, t:"Deploy Web App", icon:"🚀", steps:[
+              "Klik Deploy → New deployment",
+              "Klik ⚙️ (di samping \"Select type\")",
+              "Muncul 4 pilihan: Web app / API Executable / Add-on / Library",
+              "⭐ Pilih \"Web app\" (yang pertama!)",
+              "Execute as: Me (akun Anda sendiri)",
+              "Who has access: Anyone (agar mahasiswa bisa akses)",
+              "Klik Deploy → Authorize access → pilih akun → Allow",
+              "Jika muncul \"Google hasn't verified\" → klik Advanced → Go to... → Allow",
+              "📋 COPY URL yang muncul! (simpan baik-baik)"
+            ]},
+            {n:4, t:"Pasang URL di index.html", icon:"🔗", steps:[
+              "Buka docs/index.html di text editor",
+              "Cari: const SCRIPT_URL = \"\";",
+              "Ganti \"\" dengan URL dari Langkah 3",
+              "Simpan file (Ctrl+S)",
+              "Upload ulang ke GitHub / refresh halaman"
+            ]}
+          ].map(({n,t,icon,steps})=>(
+            <div key={n} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+              <div className="bg-stone-100 px-4 py-2.5 border-b border-stone-200 flex items-center gap-2">
+                <span className="text-lg">{icon}</span>
+                <span className="text-sm font-bold text-stone-700">Langkah {n}: {t}</span>
+              </div>
+              <div className="px-4 py-3 space-y-1.5">
+                {steps.map((s,i)=>(
+                  <div key={i} className="flex items-start gap-2 text-xs text-stone-600">
+                    <span className="text-stone-400 font-bold shrink-0 w-4 text-right">{i+1}.</span>
+                    <span>{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 mt-4">
+          <p className="text-xs font-bold text-sky-800 mb-2">💡 Tips:</p>
+          <div className="text-xs text-sky-700 space-y-1">
+            <p>• Peringatan "Google hasn't verified" itu normal — klik Advanced → Go to... → Allow</p>
+            <p>• Mahasiswa TIDAK perlu login Google untuk bermain</p>
+            <p>• Setiap edit kode = harus Deploy → New deployment (URL baru)</p>
+            <p>• Tanpa SCRIPT_URL, TTS tetap berjalan (mode offline)</p>
+          </div>
+        </div>
+
+        <div className="bg-stone-100 rounded-xl p-4 mt-3 text-center">
+          <p className="text-xs text-stone-500 mb-2">File Code.gs ada di paket download:</p>
+          <p className="text-xs font-mono text-stone-700 font-bold">apps-script/Code.gs</p>
+          <p className="text-xs text-stone-400 mt-2">Panduan lengkap juga tersedia di file DOCX terpisah</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ════════════════════════════════════════════
+     LEADERBOARD SCREEN
+     ════════════════════════════════════════════ */
+  if(screen==="leaderboard") return(
+    <div className="min-h-screen bg-stone-50 p-4">
+      <div className="max-w-md mx-auto fade">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={()=>setScreen("home")} className="text-sm text-stone-400 hover:text-stone-700">← Kembali</button>
+          <h2 className="text-lg font-bold text-stone-800">🏆 Papan Skor</h2>
+          <div className="w-16"/>
+        </div>
+
+        {!hasApi&&(
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-center">
+            <p className="text-sm text-amber-800 font-medium">Mode Offline</p>
+            <p className="text-xs text-amber-600 mt-1">Google Sheets belum dikonfigurasi. Lihat panduan setup di README.</p>
+          </div>
+        )}
+
+        {lbLoading&&<div className="text-center py-12"><div className="spinner border-stone-400 border-t-transparent mx-auto"/><p className="text-xs text-stone-400 mt-3">Memuat data...</p></div>}
+
+        {!lbLoading&&lbData&&(
+          <div className="space-y-4">
+            {/* Filter tabs */}
+            <div className="flex gap-2 justify-center">
+              {[null,"TTS I","TTS II"].map(f=>(
+                <button key={f||"all"} onClick={()=>openLeaderboard(f)}
+                  className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors
+                    ${lbPuzzle===f?"bg-stone-800 text-white":"bg-stone-200 text-stone-600 hover:bg-stone-300"}`}>
+                  {f||"Semua"}
+                </button>
+              ))}
+            </div>
+
+            {Object.keys(lbData).length===0&&(
+              <div className="text-center py-8">
+                <div className="text-3xl mb-2">📭</div>
+                <p className="text-sm text-stone-500">Belum ada skor. Jadilah yang pertama!</p>
+              </div>
+            )}
+
+            {Object.entries(lbData).map(([puzzle,entries])=>(
+              <div key={puzzle} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+                <div className="bg-stone-100 px-4 py-2 border-b border-stone-200">
+                  <span className="text-xs font-bold text-stone-500">{puzzle}</span>
+                </div>
+                <div className="divide-y divide-stone-100">
+                  {entries.map((entry,i)=>(
+                    <div key={i} className={`flex items-center gap-3 px-4 py-2.5 ${i<3?"bg-stone-50":""}`}>
+                      <span className={`text-sm font-bold w-7 text-center shrink-0
+                        ${i===0?"text-amber-500":i===1?"text-stone-400":i===2?"text-amber-700":"text-stone-300"}`}>
+                        {i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}.`}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-stone-800 truncate">{entry.nama}</div>
+                        {entry.nim&&<div className="text-xs text-stone-400">{entry.nim}</div>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-bold font-mono text-stone-800">{entry.skor}</div>
+                        <div className="text-xs text-stone-400">{entry.waktu}{entry.hints>0?` · 💡${entry.hints}`:""}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!lbLoading&&!lbData&&hasApi&&(
+          <div className="text-center py-8">
+            <p className="text-sm text-red-500">Gagal memuat data. Periksa koneksi internet.</p>
+            <button onClick={()=>openLeaderboard(lbPuzzle)} className="mt-2 text-sm text-sky-600 hover:underline">Coba lagi</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  /* ════════════════════════════════════════════
+     HOME SCREEN
+     ════════════════════════════════════════════ */
+  if(screen==="home") return(
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full fade">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-stone-800 text-white mb-4 shadow-xl shadow-stone-400/20">
+            <div className="text-center">
+              <div className="text-sm opacity-40 mb-0.5">☪</div>
+              <div className="text-lg font-bold tracking-[3px]">TTS</div>
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-stone-800">Teka-Teki Silang</h1>
+          <p className="text-sm text-stone-400 mt-1">Khulafaur Rasyidin & Peradaban Islam</p>
+        </div>
+
+        {/* Player info */}
+        <div className="bg-white rounded-2xl border border-stone-200 p-4 mb-4 flex items-center justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-bold text-stone-800 truncate">{nama}</div>
+            {nim&&<div className="text-xs text-stone-400">{nim}</div>}
+          </div>
+          <button onClick={()=>setScreen("login")} className="text-xs text-sky-600 hover:text-sky-800 shrink-0 ml-2">Ganti</button>
+        </div>
+
+        {/* Puzzle selection */}
+        <div className="space-y-3 mb-4">
+          {[1,2].map(id=>{const p=PZ[id];return(
+            <button key={id} onClick={()=>start(id)}
+              className="w-full text-left p-5 bg-white rounded-2xl border border-stone-200 hover:border-stone-400 hover:shadow-xl transition-all active:scale-[0.98] group">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-stone-800 group-hover:text-stone-900">{p.title}</div>
+                  <div className="text-xs text-stone-400 mt-1">{p.sub}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-stone-200 group-hover:text-stone-300 font-mono">{p.words.length}</div>
+                  <div className="text-xs text-stone-400">kata</div>
+                </div>
+              </div>
+            </button>
+          )})}
+        </div>
+
+        {/* Online status + Leaderboard/Setup buttons */}
+        <div className="flex gap-2 mb-4">
+          <button onClick={()=>openLeaderboard(null)}
+            className={`flex-1 p-4 rounded-2xl border transition-all text-center
+              ${hasApi?"bg-amber-50 border-amber-200 hover:border-amber-400 hover:shadow-lg":"bg-stone-100 border-stone-200 opacity-60 cursor-not-allowed"}`}
+            disabled={!hasApi}>
+            <span className="text-sm font-medium text-amber-800">🏆 Papan Skor</span>
+            {!hasApi&&<span className="block text-xs text-stone-400 mt-0.5">Aktifkan Google Sheets dulu</span>}
+          </button>
+          <button onClick={()=>setShowSetup(true)}
+            className={`p-4 rounded-2xl border transition-all text-center shrink-0
+              ${hasApi?"bg-emerald-50 border-emerald-200 hover:border-emerald-400":"bg-sky-50 border-sky-300 hover:border-sky-400 hover:shadow-lg animate-pulse"}`}>
+            <span className="text-sm font-medium">{hasApi?"✅ Online":"🔧 Setup"}</span>
+          </button>
+        </div>
+
+        {!hasApi&&(
+          <div className="bg-sky-50 border border-sky-200 rounded-xl p-3 mb-4 flex items-center gap-3 cursor-pointer hover:bg-sky-100 transition-colors"
+            onClick={()=>setShowSetup(true)}>
+            <span className="text-2xl">📊</span>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-sky-800">Hubungkan ke Google Sheets</p>
+              <p className="text-xs text-sky-600">Simpan skor mahasiswa otomatis + papan skor. Klik untuk panduan setup →</p>
+            </div>
+          </div>
+        )}
+
+        {/* How to play */}
+        <div className="p-5 bg-white rounded-2xl border border-stone-200 mt-4">
+          <p className="text-xs font-semibold text-stone-500 mb-4 text-center uppercase tracking-widest">Cara Bermain</p>
+          <div className="grid grid-cols-2 gap-4 text-xs text-stone-500">
+            {[["⏱","Timer","Otomatis, bisa di-pause"],["🏆","Skor","Kata × 10 poin"],["💡","Hint","Buka 1 huruf (−50%)"],["✓","Cek","Periksa per kata"]].map(([ic,t,d])=>(
+              <div key={t} className="flex items-start gap-2.5">
+                <span className="text-lg shrink-0 mt-0.5">{ic}</span>
+                <div><b className="text-stone-700">{t}</b><br/>{d}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-3 border-t border-stone-100 text-xs text-stone-400 text-center">
+            Ketuk kotak yang sama di perpotongan untuk ganti arah ↔
+          </div>
+        </div>
+        <p className="text-center text-xs text-stone-300 mt-4">v2.1 · {hasApi?"🟢 Google Sheets terhubung":"🔴 Mode offline — setup untuk simpan skor"}</p>
+      </div>
+    </div>
+  );
+
+  /* ════════════════════════════════════════════
+     PUZZLE SCREEN
+     ════════════════════════════════════════════ */
+  const cSz=Math.max(22,Math.min(32,Math.floor(Math.min(winW-20,540)/pz.C)));
 
   return(
-    <div className="min-h-screen bg-stone-50 pb-6">
-      <div className="bg-stone-800 text-white px-3 py-2 sticky top-0 z-20 shadow-lg no-print">
+    <div className="min-h-screen bg-stone-50 pb-8">
+      {/* TOP BAR */}
+      <div className="bg-stone-800 text-white px-3 py-2.5 sticky top-0 z-20 shadow-lg no-print">
         <div className="flex items-center justify-between max-w-xl mx-auto">
-          <button onClick={()=>{setPid(null);setOn(false)}} className="text-xs text-stone-400 hover:text-white">← Menu</button>
-          <span className="text-xs text-stone-400 truncate mx-2">{pz.title}</span>
-          <div className="font-mono font-bold text-lg tabular-nums">{fmt(sec)}</div>
+          <button onClick={tryExit} className="text-xs text-stone-400 hover:text-white transition-colors py-1">← Menu</button>
+          <div className="flex items-center gap-1.5 mx-2 min-w-0">
+            <span className="text-xs text-stone-400 truncate hidden sm:block">{pz.title}</span>
+            <span className="text-xs text-stone-500 truncate">· {nama}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={()=>setPaused(p=>!p)}
+              className="text-xs bg-stone-700 hover:bg-stone-600 px-2 py-1 rounded transition-colors"
+              title={paused?"Lanjutkan":"Jeda"}>
+              {paused?"▶":"⏸"}
+            </button>
+            <div className="font-mono font-bold text-lg tabular-nums w-16 text-right">{fmt(secs)}</div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 max-w-xl mx-auto mt-1">
-          <span className="text-xs bg-stone-700 px-2 py-0.5 rounded font-medium">{sc} poin</span>
-          <span className="text-xs bg-stone-700 px-2 py-0.5 rounded">{sv.size}/{tot}</span>
-          {ht.size>0&&<span className="text-xs bg-amber-900/60 px-2 py-0.5 rounded">💡×{ht.size}</span>}
-          <div className="flex-1 h-1.5 bg-stone-700 rounded-full overflow-hidden ml-1"><div className="h-full bg-emerald-400 rounded-full transition-all duration-500" style={{width:`${(sv.size/tot)*100}%`}}/></div>
+        <div className="flex items-center gap-2 max-w-xl mx-auto mt-1.5">
+          <span className="text-xs bg-stone-700 px-2 py-0.5 rounded font-medium font-mono">{score}</span>
+          <span className="text-xs bg-stone-700 px-2 py-0.5 rounded">{solved.size}/{total}</span>
+          {hinted.size>0&&<span className="text-xs bg-amber-900/60 px-2 py-0.5 rounded">💡{hinted.size}</span>}
+          <div className="flex-1 h-1.5 bg-stone-700 rounded-full overflow-hidden ml-1">
+            <div className="h-full bg-emerald-400 rounded-full transition-all duration-500" style={{width:`${(solved.size/total)*100}%`}}/>
+          </div>
+          <button onClick={()=>start(pid)} className="text-xs text-stone-500 hover:text-stone-300 transition-colors" title="Ulangi">↻</button>
         </div>
       </div>
 
-      {done&&<div className="mx-3 mt-3 p-5 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-center">
-        <div className="text-4xl mb-2">🎉</div>
-        <div className="font-bold text-emerald-800 text-lg">Alhamdulillah, Selesai!</div>
-        <div className="text-sm text-emerald-700 mt-2">Waktu: <b>{fmt(sec)}</b> — Skor: <b>{sc}</b></div>
-        <div className="text-xs text-emerald-600 mt-1">{ht.size===0?"Sempurna tanpa bantuan! 🌟":ht.size<=3?"Sangat baik!":"Terus belajar!"}</div>
-        <button onClick={()=>{setPid(null);setOn(false)}} className="mt-3 bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700">Kembali ke Menu</button>
-      </div>}
+      {/* PAUSE */}
+      {paused&&!done&&!exitDlg&&(
+        <div className="fixed inset-0 z-30 bg-stone-900/80 overlay flex items-center justify-center">
+          <div className="text-center fade">
+            <div className="text-5xl mb-4">⏸</div>
+            <div className="text-white text-xl font-bold mb-2">Dijeda</div>
+            <div className="text-stone-400 text-sm mb-6">Waktu: {fmt(secs)} · Skor: {score}</div>
+            <button onClick={()=>setPaused(false)} className="bg-white text-stone-800 px-8 py-3 rounded-xl font-bold hover:bg-stone-100 transition-colors shadow-lg">
+              Lanjutkan ▶
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* EXIT CONFIRM */}
+      {exitDlg&&(
+        <div className="fixed inset-0 z-40 bg-stone-900/80 overlay flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-xs w-full text-center fade shadow-2xl">
+            <div className="text-2xl mb-2">⚠️</div>
+            <div className="font-bold text-stone-800 mb-1">Keluar dari TTS?</div>
+            <div className="text-xs text-stone-500 mb-5">Progress ({solved.size}/{total} kata) akan hilang.</div>
+            <div className="flex gap-2">
+              <button onClick={()=>{setExitDlg(false);setPaused(false)}}
+                className="flex-1 py-2.5 bg-stone-100 text-stone-700 rounded-xl text-sm font-medium hover:bg-stone-200">Batal</button>
+              <button onClick={doExit}
+                className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600">Keluar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* COMPLETION + SUBMIT */}
+      {done&&(
+        <div className="mx-3 mt-3 p-6 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-center fade">
+          <div className="text-5xl mb-3 pop">🎉</div>
+          <div className="font-bold text-emerald-800 text-xl">Alhamdulillah, Selesai!</div>
+          <div className="text-sm text-emerald-700 mt-3">
+            <b>{nama}</b>{nim?` (${nim})`:""}<br/>
+            Waktu: <b className="font-mono">{fmt(secs)}</b> · Skor: <b className="font-mono">{score}</b>
+            {hinted.size>0&&<span> · Hint: {hinted.size}</span>}
+          </div>
+          <div className="text-xs text-emerald-600 mt-1">
+            {hinted.size===0?"Sempurna tanpa bantuan! 🌟":hinted.size<=3?"Sangat baik!":"Terus belajar!"}
+          </div>
+
+          {/* Submit to Google Sheets */}
+          {hasApi&&!submitted&&(
+            <button onClick={doSubmit} disabled={submitting}
+              className="mt-4 bg-emerald-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 transition-all inline-flex items-center gap-2">
+              {submitting?<><span className="spinner"/><span>Mengirim...</span></>:
+                <><span>📤</span><span>Simpan Skor ke Google Sheets</span></>}
+            </button>
+          )}
+
+          {submitted&&submitResult?.success&&(
+            <div className="mt-3 bg-emerald-100 border border-emerald-300 rounded-xl p-3 fade">
+              <p className="text-sm text-emerald-800 font-medium">✅ Skor tersimpan!</p>
+              {submitResult.rank&&(
+                <p className="text-xs text-emerald-600 mt-1">
+                  Peringkat #{submitResult.rank} dari {submitResult.totalPlayers} pemain di {pz.label}
+                </p>
+              )}
+            </div>
+          )}
+
+          {submitResult&&!submitResult.success&&submitResult.error!=="offline"&&(
+            <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3">
+              <p className="text-xs text-red-600">Gagal menyimpan: {submitResult.error}</p>
+              <button onClick={()=>{setSubmitResult(null);setSubmitted(false)}} className="text-xs text-sky-600 mt-1">Coba lagi</button>
+            </div>
+          )}
+
+          {!hasApi&&(
+            <div className="mt-3 bg-sky-50 border border-sky-200 rounded-xl p-3 cursor-pointer hover:bg-sky-100"
+              onClick={()=>{setDone(false);setShowSetup(true)}}>
+              <p className="text-xs text-sky-700 font-medium">📊 Ingin skor tersimpan otomatis?</p>
+              <p className="text-xs text-sky-500 mt-0.5">Hubungkan ke Google Sheets → Klik untuk panduan setup</p>
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-center mt-4">
+            <button onClick={()=>start(pid)}
+              className="bg-emerald-200 text-emerald-800 px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-300">↻ Ulangi</button>
+            {hasApi&&submitted&&(
+              <button onClick={()=>openLeaderboard(pz.label)}
+                className="bg-amber-100 text-amber-800 px-4 py-2 rounded-xl text-sm font-medium hover:bg-amber-200">🏆 Papan Skor</button>
+            )}
+            <button onClick={doExit}
+              className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700">Menu</button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-xl mx-auto px-2 mt-2">
-        <div className="overflow-x-auto pb-1 grid-scroll" style={{WebkitOverflowScrolling:"touch"}}>
-          <div className="inline-grid mx-auto" style={{gridTemplateColumns:`repeat(${pz.C},${cSz}px)`,gap:0,border:"1.5px solid #78716c"}}>
+        {/* GRID */}
+        <div className="overflow-x-auto pb-1 grid-wrap" style={{WebkitOverflowScrolling:"touch"}}>
+          <div className="inline-grid mx-auto"
+            style={{gridTemplateColumns:`repeat(${pz.C},${cSz}px)`,gap:0,border:"2px solid #57534e"}}
+            role="grid" aria-label="Teka-Teki Silang">
             {Array.from({length:pz.R}).map((_,r)=>
               Array.from({length:pz.C}).map((_,c)=>{
-                const cell=pz.g[r][c];const k=`${r}-${c}`;
-                if(!cell.a)return <div key={k} style={{width:cSz,height:cSz}} className="bg-stone-300"/>;
-                const isSolved=ck[k]==="ok"||ck[k]==="hint";
-                return(<div key={k} style={{width:cSz,height:cSz}} className={`relative border ${cst(r,c)} transition-colors`}>
-                  {cell.n>0&&<span className="absolute text-stone-500 font-bold leading-none" style={{fontSize:Math.max(7,cSz*0.28),top:0.5,left:1}}>{cell.n}</span>}
-                  <input ref={el=>rr.current[k]=el} type="text" inputMode="text" autoComplete="off" autoCorrect="off" autoCapitalize="characters" spellCheck="false"
-                    value={ug[k]||""} maxLength={2} onChange={e=>inp(r,c,e.target.value)} onKeyDown={e=>kd(e,r,c)}
-                    onFocus={()=>{const w=pz.ws.find(w=>cells(w).some(x=>x.r===r&&x.c===c));if(w)setSw(w)}}
-                    disabled={isSolved} className="w-full h-full text-center font-bold bg-transparent outline-none uppercase"
-                    style={{fontSize:Math.max(10,cSz*0.48),paddingTop:cell.n>0?cSz*0.15:0,color:ck[k]==="hint"?"#b45309":"#1c1917",caretColor:"#0284c7"}}/>
-                </div>)
+                const cell=pz.grid[r][c];const k=`${r}-${c}`;
+                if(!cell.a) return<div key={k} style={{width:cSz,height:cSz}} className="bg-stone-400"/>;
+                const sd=isCellDone(k);
+                return(
+                  <div key={k} style={{width:cSz,height:cSz}} className={`relative border transition-colors duration-100 ${cellCls(r,c)}`}>
+                    {cell.n>0&&<span className="absolute text-stone-500 font-semibold leading-none select-none pointer-events-none"
+                      style={{fontSize:Math.max(7,cSz*0.28),top:1,left:1.5}}>{cell.n}</span>}
+                    <input ref={el=>refs.current[k]=el} type="text" inputMode="none"
+                      autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
+                      value={input[k]||""} maxLength={2}
+                      onChange={e=>onInput(r,c,e.target.value)} onKeyDown={e=>onKey(e,r,c)}
+                      onFocus={()=>pickWord(r,c)} onClick={()=>pickWord(r,c)}
+                      disabled={sd||paused}
+                      aria-label={cell.n>0?`Sel nomor ${cell.n}`:`Sel ${r+1},${c+1}`}
+                      className="w-full h-full text-center font-bold bg-transparent outline-none uppercase select-none"
+                      style={{fontSize:Math.max(11,cSz*0.5),paddingTop:cell.n>0?cSz*0.16:0,
+                        color:cellSt[k]==="hint"?"#b45309":"#1c1917",caretColor:"#0284c7"}}/>
+                  </div>
+                );
               })
             )}
           </div>
         </div>
 
-        {sw&&!sv.has(sw.n)&&<div className="bg-sky-50 border border-sky-200 rounded-xl p-2.5 my-2 flex items-start gap-2 no-print">
-          <span className="bg-sky-600 text-white text-xs font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">{sw.n}{sw.d==="across"?"→":"↓"}</span>
-          <p className="text-xs text-sky-900 flex-1 leading-relaxed">{sw.cl}</p>
-          <button onClick={()=>hint(sw)} className="text-sm px-2 py-1 bg-amber-50 border border-amber-300 rounded-lg hover:bg-amber-100 shrink-0">💡</button>
-          <button onClick={()=>chk(sw)} className="text-sm px-2 py-1 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 shrink-0 font-bold text-emerald-700">✓</button>
-        </div>}
+        {/* ACTIVE CLUE */}
+        {active&&!isWDone(active)&&!paused&&(
+          <div className="bg-sky-50 border border-sky-200 rounded-xl p-3 my-2 flex items-start gap-2 no-print fade">
+            <button onClick={()=>{
+                if(!pz)return;const k=`${active.row}-${active.col}`;const here=pz.c2w[k]||[];
+                if(here.length>1){const o=here.find(e=>e.dir!==active.dir);if(o){setActive(pz.words[o.idx]);return}}
+              }}
+              className="bg-sky-600 text-white text-xs font-bold px-2 py-1 rounded shrink-0 mt-0.5 hover:bg-sky-700 transition-colors cursor-pointer"
+              title="Klik untuk ganti arah">
+              {active.num}{active.dir==="across"?"→":"↓"}
+            </button>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-sky-900 leading-relaxed">{active.clue}</p>
+              <p className="text-xs text-sky-500 mt-0.5">({active.len} huruf)</p>
+            </div>
+            <button onClick={()=>giveHint(active)} className="text-sm px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg hover:bg-amber-100 active:bg-amber-200 shrink-0 transition-colors" title="Buka 1 huruf">💡</button>
+            <button onClick={()=>checkWord(active)} className="text-sm px-2.5 py-1.5 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 active:bg-emerald-200 shrink-0 font-bold text-emerald-700 transition-colors" title="Cek jawaban">✓</button>
+          </div>
+        )}
 
+        {/* CLUES */}
         {["across","down"].map(dir=>{
           const label=dir==="across"?"MENDATAR →":"MENURUN ↓";
           const list=dir==="across"?pz.ac:pz.dn;
-          return(<div key={dir} className="bg-white rounded-xl border border-stone-200 mb-2 overflow-hidden">
-            <div className="bg-stone-100 px-3 py-1.5 border-b border-stone-200"><span className="text-xs font-bold text-stone-500 tracking-wider">{label}</span></div>
-            <div className="divide-y divide-stone-100 max-h-56 overflow-y-auto">
-              {list.map(w=>{const isSv=sv.has(w.n);const isSel=sw?.n===w.n&&sw?.d===w.d;return(
-                <div key={`${w.d}-${w.n}`} className={`flex items-start gap-1.5 px-3 py-1.5 cursor-pointer transition-colors ${isSel?"bg-sky-50":"hover:bg-stone-50"} ${isSv?"opacity-40":""}`}
-                  onClick={()=>{setSw(w);setTimeout(()=>rr.current[`${w.row}-${w.col}`]?.focus(),30)}}>
-                  <span className="text-xs font-bold text-stone-400 w-6 shrink-0 text-right">{w.n}.</span>
-                  <p className={`text-xs leading-relaxed flex-1 ${isSv?"line-through text-stone-400":"text-stone-700"}`}>{w.cl}</p>
-                  {!isSv&&<div className="flex gap-1 shrink-0 no-print">
-                    <button onClick={e=>{e.stopPropagation();hint(w)}} className="text-xs text-amber-500 hover:text-amber-700">💡</button>
-                    <button onClick={e=>{e.stopPropagation();chk(w)}} className="text-xs text-emerald-600 hover:text-emerald-800 font-bold">✓</button>
-                  </div>}
-                  {isSv&&<span className="text-emerald-500 text-xs font-bold">✓ {w.w}</span>}
-                </div>
-              )})}
+          return(
+            <div key={dir} className="bg-white rounded-xl border border-stone-200 mb-2 overflow-hidden">
+              <div className="bg-stone-100 px-3 py-2 border-b border-stone-200">
+                <span className="text-xs font-bold text-stone-500 tracking-wider uppercase">{label}</span>
+              </div>
+              <div className="divide-y divide-stone-100 max-h-64 sm:max-h-96 overflow-y-auto clue-list">
+                {list.map(w=>{const wd=isWDone(w);const sel=active?.num===w.num&&active?.dir===w.dir;return(
+                  <div key={`${w.dir}-${w.num}`}
+                    className={`flex items-start gap-2 px-3 py-2 cursor-pointer transition-colors ${sel?"bg-sky-50":"hover:bg-stone-50"} ${wd?"opacity-40":""}`}
+                    onClick={()=>{setActive(w);setCursor(`${w.row}-${w.col}`);setTimeout(()=>refs.current[`${w.row}-${w.col}`]?.focus(),30)}}>
+                    <span className="text-xs font-bold text-stone-400 w-6 shrink-0 text-right tabular-nums">{w.num}.</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs leading-relaxed ${wd?"line-through text-stone-400":"text-stone-700"}`}>
+                        {w.clue} <span className="text-stone-400">({w.len})</span>
+                      </p>
+                      {wd&&<p className="text-xs text-emerald-500 font-bold mt-0.5">✓ {w.word}</p>}
+                    </div>
+                    {!wd&&<div className="flex gap-1.5 shrink-0 no-print">
+                      <button onClick={e=>{e.stopPropagation();giveHint(w)}} className="text-sm text-amber-500 hover:text-amber-700 transition-colors">💡</button>
+                      <button onClick={e=>{e.stopPropagation();checkWord(w)}} className="text-sm text-emerald-600 hover:text-emerald-800 font-bold transition-colors">✓</button>
+                    </div>}
+                  </div>
+                )})}
+              </div>
             </div>
-          </div>)
+          );
         })}
 
-        <div className="flex flex-wrap gap-2 justify-center text-xs text-stone-400 py-2 no-print">
-          {[["bg-emerald-100 border-emerald-500","Benar"],["bg-red-50 border-red-400","Salah"],["bg-amber-50 border-amber-400","Hint"],["bg-sky-50 border-sky-300","Aktif"]].map(([cls,lb])=>
-            <div key={lb} className="flex items-center gap-1"><div className={`w-2.5 h-2.5 border rounded-sm ${cls}`}/>{lb}</div>
-          )}
+        <div className="flex flex-wrap gap-3 justify-center text-xs text-stone-400 py-3 no-print">
+          {[["c-ok","Benar"],["c-err","Salah"],["c-hint","Hint"],["c-sel","Aktif"]].map(([cl,lb])=>(
+            <div key={lb} className="flex items-center gap-1"><div className={`w-3 h-3 border rounded-sm ${cl}`}/>{lb}</div>
+          ))}
         </div>
-        <p className="text-center text-xs text-stone-300 pb-4 no-print">💡 buka 1 huruf (skor -50%) · ✓ cek jawaban</p>
+        <p className="text-center text-xs text-stone-300 pb-2 no-print">
+          💡 buka 1 huruf (−50%) · ✓ cek jawaban · ketuk ulang untuk ganti arah
+        </p>
       </div>
     </div>
   );
