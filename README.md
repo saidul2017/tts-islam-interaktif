@@ -4,9 +4,7 @@ Teka-Teki Silang (TTS) interaktif berbasis web untuk pembelajaran sejarah dan pe
 
 ## 🎮 Demo Langsung
 
-👉 **https://USERNAME.github.io/tts-islam-interaktif/**
-
-> Ganti `USERNAME` dengan username GitHub Anda setelah deploy.
+👉 **https://saidul2017.github.io/tts-islam-interaktif/**
 
 ## 📋 Konten
 
@@ -38,7 +36,7 @@ Teka-Teki Silang (TTS) interaktif berbasis web untuk pembelajaran sejarah dan pe
    - Source: **Deploy from a branch**
    - Branch: **main** → folder **/docs**
    - Klik **Save**
-4. Tunggu 1-2 menit, akses di `https://USERNAME.github.io/REPO-NAME/`
+4. Tunggu 1-2 menit, akses di `https://saidul2017.github.io/tts-islam-interaktif/`
 
 ### Cara Terminal:
 
@@ -47,7 +45,7 @@ git init
 git add .
 git commit -m "Initial commit - TTS Interaktif"
 git branch -M main
-git remote add origin https://github.com/USERNAME/tts-islam-interaktif.git
+git remote add origin https://github.com/saidul2017/tts-islam-interaktif.git
 git push -u origin main
 ```
 
@@ -79,7 +77,7 @@ Folder `/print/` berisi file DOCX untuk dicetak dan dibagikan ke mahasiswa:
 Setelah deploy, buat QR code dari URL GitHub Pages Anda:
 
 1. Buka [qr-code-generator.com](https://www.qr-code-generator.com/) atau site sejenis
-2. Masukkan URL: `https://USERNAME.github.io/tts-islam-interaktif/`
+2. Masukkan URL: `https://saidul2017.github.io/tts-islam-interaktif/`
 3. Download QR code
 4. Tempelkan pada lembar cetak DOCX (ganti placeholder)
 
