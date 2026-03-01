@@ -28,7 +28,7 @@ const RAW={"p1":{"r":20,"c":25,"w":[[2,"BAIAT","Sumpah setia dan pengakuan forma
 
 function parse(p){
   const g=Array.from({length:p.r},()=>Array.from({length:p.c},()=>({l:"",n:0,a:false})));
-  const ws=p.w.map(([n,w,cl,row,col,isA])=>{
+  const words=p.w.map(([n,w,cl,row,col,isA])=>{
     const d=isA?"across":"down";
     for(let i=0;i<w.length;i++){
       const r=d==="across"?row:row+i,c=d==="across"?col+i:col;
@@ -36,98 +36,112 @@ function parse(p){
     }
     return{n,w,cl,row,col,d}
   });
-  return{g,R:p.r,C:p.c,ws,ac:ws.filter(x=>x.d==="across").sort((a,b)=>a.n-b.n),dn:ws.filter(x=>x.d==="down").sort((a,b)=>a.n-b.n)}
+  return{g,R:p.r,C:p.c,ws:words,ac:words.filter(x=>x.d==="across").sort((a,b)=>a.n-b.n),dn:words.filter(x=>x.d==="down").sort((a,b)=>a.n-b.n)}
 }
 
-const PZ={
+const PUZZLES={
   1:{...parse(RAW.p1),title:"TTS I — Khulafaur Rasyidin",sub:"Politik, Hukum, Militer & Ekonomi"},
   2:{...parse(RAW.p2),title:"TTS II — Peradaban Islam",sub:"Ilmu Pengetahuan, Seni & Arsitektur"}
 };
 
-const fmt=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+const formatTime=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
 
 function App(){
-  const[pid,setPid]=useState(null);
-  const[ug,setUg]=useState({});
-  const[sec,setSec]=useState(0);
-  const[on,setOn]=useState(false);
-  const[sc,setSc]=useState(0);
-  const[sv,setSv]=useState(new Set());
-  const[ht,setHt]=useState(new Set());
-  const[sw,setSw]=useState(null);
-  const[ck,setCk]=useState({});
+  const[puzzleId,setPuzzleId]=useState(null);
+  const[userGrid,setUserGrid]=useState({});
+  const[seconds,setSeconds]=useState(0);
+  const[timerRunning,setTimerRunning]=useState(false);
+  const[score,setScore]=useState(0);
+  const[solvedWords,setSolvedWords]=useState(new Set());
+  const[hintedWords,setHintedWords]=useState(new Set());
+  const[selectedWord,setSelectedWord]=useState(null);
+  const[cellChecks,setCellChecks]=useState({});
   const[done,setDone]=useState(false);
-  const rr=useRef({});
-  const tr=useRef(null);
+  const[windowWidth,setWindowWidth]=useState(window.innerWidth);
+  const inputRefs=useRef({});
+  const timerRef=useRef(null);
+  const resizeTimerRef=useRef(null);
 
-  useEffect(()=>{if(on){tr.current=setInterval(()=>setSec(t=>t+1),1000)}return()=>clearInterval(tr.current)},[on]);
+  useEffect(()=>{
+    if(timerRunning){timerRef.current=setInterval(()=>setSeconds(t=>t+1),1000)}
+    return()=>clearInterval(timerRef.current)
+  },[timerRunning]);
 
-  const go=(id)=>{
-    const p=PZ[id];const u={};
-    for(let r=0;r<p.R;r++)for(let c=0;c<p.C;c++)if(p.g[r][c].a)u[`${r}-${c}`]="";
-    setPid(id);setUg(u);setSec(0);setOn(true);setSc(0);setSv(new Set());setHt(new Set());setSw(null);setCk({});setDone(false);
+  useEffect(()=>{
+    const handleResize=()=>{
+      clearTimeout(resizeTimerRef.current);
+      resizeTimerRef.current=setTimeout(()=>setWindowWidth(window.innerWidth),100);
+    };
+    window.addEventListener("resize",handleResize);
+    return()=>{window.removeEventListener("resize",handleResize);clearTimeout(resizeTimerRef.current)};
+  },[]);
+
+  const startPuzzle=(id)=>{
+    const puzzleData=PUZZLES[id];const initialGrid={};
+    for(let r=0;r<puzzleData.R;r++)for(let c=0;c<puzzleData.C;c++)if(puzzleData.g[r][c].a)initialGrid[`${r}-${c}`]="";
+    setPuzzleId(id);setUserGrid(initialGrid);setSeconds(0);setTimerRunning(true);setScore(0);setSolvedWords(new Set());setHintedWords(new Set());setSelectedWord(null);setCellChecks({});setDone(false);
   };
 
-  const pz=pid?PZ[pid]:null;
-  const tot=pz?pz.ws.length:0;
+  const puzzle=puzzleId?PUZZLES[puzzleId]:null;
+  const totalWords=puzzle?puzzle.ws.length:0;
 
   const cells=(w)=>{
-    const c=[];
+    const wordCells=[];
     for(let i=0;i<w.w.length;i++){
-      const r=w.d==="across"?w.row:w.row+i,co=w.d==="across"?w.col+i:w.col;
-      c.push({r,c:co,k:`${r}-${co}`,l:w.w[i]})
+      const r=w.d==="across"?w.row:w.row+i,col=w.d==="across"?w.col+i:w.col;
+      wordCells.push({r,c:col,k:`${r}-${col}`,l:w.w[i]})
     }
-    return c
+    return wordCells
   };
 
-  const chk=(w)=>{
-    const cs=cells(w);let ok=true;const nc={...ck};
-    cs.forEach(({k,l})=>{if((ug[k]||"")===l)nc[k]="ok";else{nc[k]="err";ok=false}});
-    setCk(nc);
-    if(ok&&!sv.has(w.n)){
-      const ns=new Set(sv);ns.add(w.n);setSv(ns);
-      const base=w.w.length*10;const pen=ht.has(w.n)?Math.floor(base*0.5):0;
-      setSc(s=>s+base-pen);
-      if(ns.size===tot){setOn(false);setDone(true)}
+  const checkWord=(w)=>{
+    const wordCells=cells(w);let ok=true;const newChecks={...cellChecks};
+    wordCells.forEach(({k,l})=>{if((userGrid[k]||"")===l)newChecks[k]="ok";else{newChecks[k]="err";ok=false}});
+    setCellChecks(newChecks);
+    if(ok&&!solvedWords.has(w.n)){
+      const newSolved=new Set(solvedWords);newSolved.add(w.n);setSolvedWords(newSolved);
+      const base=w.w.length*10;const pen=hintedWords.has(w.n)?Math.floor(base*0.5):0;
+      setScore(s=>s+base-pen);
+      if(newSolved.size===totalWords){setTimerRunning(false);setDone(true)}
     }
   };
 
   const hint=(w)=>{
-    if(sv.has(w.n))return;
+    if(solvedWords.has(w.n))return;
     for(const{k,l}of cells(w)){
-      if((ug[k]||"")!==l){
-        setUg(p=>({...p,[k]:l}));setCk(p=>({...p,[k]:"hint"}));setHt(p=>new Set(p).add(w.n));return;
+      if((userGrid[k]||"")!==l){
+        setUserGrid(p=>({...p,[k]:l}));setCellChecks(p=>({...p,[k]:"hint"}));setHintedWords(p=>new Set(p).add(w.n));return;
       }
     }
   };
 
-  const inp=(r,c,val)=>{
+  const handleInput=(r,c,val)=>{
     const v=val.toUpperCase().replace(/[^A-Z]/g,"").slice(-1);
-    setUg(p=>({...p,[`${r}-${c}`]:v}));
-    setCk(p=>{const n={...p};delete n[`${r}-${c}`];return n});
-    if(v&&sw){const cs=cells(sw);const idx=cs.findIndex(x=>x.r===r&&x.c===c);if(idx>=0&&idx<cs.length-1){const nx=cs[idx+1];setTimeout(()=>rr.current[nx.k]?.focus(),20)}}
+    setUserGrid(p=>({...p,[`${r}-${c}`]:v}));
+    setCellChecks(p=>{const n={...p};delete n[`${r}-${c}`];return n});
+    if(v&&selectedWord){const wordCells=cells(selectedWord);const idx=wordCells.findIndex(x=>x.r===r&&x.c===c);if(idx>=0&&idx<wordCells.length-1){const nextCell=wordCells[idx+1];setTimeout(()=>inputRefs.current[nextCell.k]?.focus(),20)}}
   };
 
-  const kd=(e,r,c)=>{
-    if(!sw)return;
-    if(e.key==="Backspace"&&!ug[`${r}-${c}`]){
-      const cs=cells(sw);const i=cs.findIndex(x=>x.r===r&&x.c===c);
-      if(i>0){const pv=cs[i-1];setUg(p=>({...p,[pv.k]:""}));setTimeout(()=>rr.current[pv.k]?.focus(),20)}
+  const handleKeyDown=(e,r,c)=>{
+    if(!selectedWord)return;
+    if(e.key==="Backspace"&&!userGrid[`${r}-${c}`]){
+      const wordCells=cells(selectedWord);const i=wordCells.findIndex(x=>x.r===r&&x.c===c);
+      if(i>0){const prevCell=wordCells[i-1];setUserGrid(p=>({...p,[prevCell.k]:""}));setTimeout(()=>inputRefs.current[prevCell.k]?.focus(),20)}
     }
   };
 
-  const sc2=sw?new Set(cells(sw).map(x=>x.k)):new Set();
-  const cst=(r,c)=>{
+  const selectedCellKeys=selectedWord?new Set(cells(selectedWord).map(x=>x.k)):new Set();
+  const getCellStyle=(r,c)=>{
     const k=`${r}-${c}`;
-    if(ck[k]==="ok")return"bg-emerald-100 border-emerald-500";
-    if(ck[k]==="err")return"bg-red-50 border-red-400";
-    if(ck[k]==="hint")return"bg-amber-50 border-amber-400";
-    if(sc2.has(k))return"bg-sky-50 border-sky-300";
+    if(cellChecks[k]==="ok")return"bg-emerald-100 border-emerald-500";
+    if(cellChecks[k]==="err")return"bg-red-50 border-red-400";
+    if(cellChecks[k]==="hint")return"bg-amber-50 border-amber-400";
+    if(selectedCellKeys.has(k))return"bg-sky-50 border-sky-300";
     return"bg-white border-gray-300"
   };
 
   // HOME
-  if(!pid)return(
+  if(!puzzleId)return(
     <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
       <div className="max-w-sm w-full">
         <div className="text-center mb-8">
@@ -137,8 +151,8 @@ function App(){
           <h1 className="text-2xl font-bold text-stone-800">Teka-Teki Silang</h1>
           <p className="text-sm text-stone-400 mt-1">Khulafaur Rasyidin & Peradaban Islam</p>
         </div>
-        {[1,2].map(id=>{const p=PZ[id];return(
-          <button key={id} onClick={()=>go(id)} className="w-full mb-3 text-left p-5 bg-white rounded-2xl border border-stone-200 hover:border-stone-400 hover:shadow-lg transition-all active:scale-[0.98]">
+        {[1,2].map(id=>{const p=PUZZLES[id];return(
+          <button key={id} onClick={()=>startPuzzle(id)} className="w-full mb-3 text-left p-5 bg-white rounded-2xl border border-stone-200 hover:border-stone-400 hover:shadow-lg transition-all active:scale-[0.98]">
             <div className="flex items-center justify-between">
               <div><div className="font-bold text-stone-800">{p.title}</div><div className="text-xs text-stone-400 mt-1">{p.sub}</div></div>
               <div className="text-right"><div className="text-2xl font-bold text-stone-300">{p.ws.length}</div><div className="text-xs text-stone-400">kata</div></div>
@@ -160,74 +174,82 @@ function App(){
   );
 
   // PUZZLE
-  const cSz=Math.max(20,Math.min(30,Math.floor((Math.min(window.innerWidth-16,520))/pz.C)));
+  const cellSize=Math.max(20,Math.min(30,Math.floor((Math.min(windowWidth-16,520))/puzzle.C)));
 
   return(
     <div className="min-h-screen bg-stone-50 pb-6">
       <div className="bg-stone-800 text-white px-3 py-2 sticky top-0 z-20 shadow-lg no-print">
         <div className="flex items-center justify-between max-w-xl mx-auto">
-          <button onClick={()=>{setPid(null);setOn(false)}} className="text-xs text-stone-400 hover:text-white">← Menu</button>
-          <span className="text-xs text-stone-400 truncate mx-2">{pz.title}</span>
-          <div className="font-mono font-bold text-lg tabular-nums">{fmt(sec)}</div>
+          <button onClick={()=>{setPuzzleId(null);setTimerRunning(false)}} className="text-xs text-stone-400 hover:text-white">← Menu</button>
+          <span className="text-xs text-stone-400 truncate mx-2">{puzzle.title}</span>
+          <div className="font-mono font-bold text-lg tabular-nums" aria-live="polite">{formatTime(seconds)}</div>
         </div>
         <div className="flex items-center gap-2 max-w-xl mx-auto mt-1">
-          <span className="text-xs bg-stone-700 px-2 py-0.5 rounded font-medium">{sc} poin</span>
-          <span className="text-xs bg-stone-700 px-2 py-0.5 rounded">{sv.size}/{tot}</span>
-          {ht.size>0&&<span className="text-xs bg-amber-900/60 px-2 py-0.5 rounded">💡×{ht.size}</span>}
-          <div className="flex-1 h-1.5 bg-stone-700 rounded-full overflow-hidden ml-1"><div className="h-full bg-emerald-400 rounded-full transition-all duration-500" style={{width:`${(sv.size/tot)*100}%`}}/></div>
+          <span className="text-xs bg-stone-700 px-2 py-0.5 rounded font-medium" aria-live="polite">{score} poin</span>
+          <span className="text-xs bg-stone-700 px-2 py-0.5 rounded">{solvedWords.size}/{totalWords}</span>
+          {hintedWords.size>0&&<span className="text-xs bg-amber-900/60 px-2 py-0.5 rounded">💡×{hintedWords.size}</span>}
+          <div className="flex-1 h-1.5 bg-stone-700 rounded-full overflow-hidden ml-1"><div className="h-full bg-emerald-400 rounded-full transition-all duration-500" style={{width:`${(solvedWords.size/totalWords)*100}%`}}/></div>
         </div>
       </div>
 
       {done&&<div className="mx-3 mt-3 p-5 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-center">
         <div className="text-4xl mb-2">🎉</div>
         <div className="font-bold text-emerald-800 text-lg">Alhamdulillah, Selesai!</div>
-        <div className="text-sm text-emerald-700 mt-2">Waktu: <b>{fmt(sec)}</b> — Skor: <b>{sc}</b></div>
-        <div className="text-xs text-emerald-600 mt-1">{ht.size===0?"Sempurna tanpa bantuan! 🌟":ht.size<=3?"Sangat baik!":"Terus belajar!"}</div>
-        <button onClick={()=>{setPid(null);setOn(false)}} className="mt-3 bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700">Kembali ke Menu</button>
+        <div className="text-sm text-emerald-700 mt-2">Waktu: <b>{formatTime(seconds)}</b> — Skor: <b>{score}</b></div>
+        <div className="text-xs text-emerald-600 mt-1">{hintedWords.size===0?"Sempurna tanpa bantuan! 🌟":hintedWords.size<=3?"Sangat baik!":"Terus belajar!"}</div>
+        <button onClick={()=>{setPuzzleId(null);setTimerRunning(false)}} className="mt-3 bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700">Kembali ke Menu</button>
       </div>}
 
       <div className="max-w-xl mx-auto px-2 mt-2">
         <div className="overflow-x-auto pb-1 grid-scroll" style={{WebkitOverflowScrolling:"touch"}}>
-          <div className="inline-grid mx-auto" style={{gridTemplateColumns:`repeat(${pz.C},${cSz}px)`,gap:0,border:"1.5px solid #78716c"}}>
-            {Array.from({length:pz.R}).map((_,r)=>
-              Array.from({length:pz.C}).map((_,c)=>{
-                const cell=pz.g[r][c];const k=`${r}-${c}`;
-                if(!cell.a)return <div key={k} style={{width:cSz,height:cSz}} className="bg-stone-300"/>;
-                const isSolved=ck[k]==="ok"||ck[k]==="hint";
-                return(<div key={k} style={{width:cSz,height:cSz}} className={`relative border ${cst(r,c)} transition-colors`}>
-                  {cell.n>0&&<span className="absolute text-stone-500 font-bold leading-none" style={{fontSize:Math.max(7,cSz*0.28),top:0.5,left:1}}>{cell.n}</span>}
-                  <input ref={el=>rr.current[k]=el} type="text" inputMode="text" autoComplete="off" autoCorrect="off" autoCapitalize="characters" spellCheck="false"
-                    value={ug[k]||""} maxLength={2} onChange={e=>inp(r,c,e.target.value)} onKeyDown={e=>kd(e,r,c)}
-                    onFocus={()=>{const w=pz.ws.find(w=>cells(w).some(x=>x.r===r&&x.c===c));if(w)setSw(w)}}
+          <div role="grid" className="inline-grid mx-auto" style={{gridTemplateColumns:`repeat(${puzzle.C},${cellSize}px)`,gap:0,border:"1.5px solid #78716c"}}>
+            {Array.from({length:puzzle.R}).map((_,r)=>
+              Array.from({length:puzzle.C}).map((_,c)=>{
+                const cell=puzzle.g[r][c];const k=`${r}-${c}`;
+                if(!cell.a)return <div key={k} style={{width:cellSize,height:cellSize}} className="bg-stone-300"/>;
+                const isSolved=cellChecks[k]==="ok"||cellChecks[k]==="hint";
+                return(<div key={k} style={{width:cellSize,height:cellSize}} className={`relative border ${getCellStyle(r,c)} transition-colors`}>
+                  {cell.n>0&&<span className="absolute text-stone-500 font-bold leading-none" style={{fontSize:Math.max(7,cellSize*0.28),top:0.5,left:1}}>{cell.n}</span>}
+                  <input ref={el=>inputRefs.current[k]=el} type="text" inputMode="text" autoComplete="off" autoCorrect="off" autoCapitalize="characters" spellCheck="false"
+                    aria-label={`Baris ${r+1} Kolom ${c+1}`}
+                    value={userGrid[k]||""} maxLength={2} onChange={e=>handleInput(r,c,e.target.value)} onKeyDown={e=>handleKeyDown(e,r,c)}
+                    onFocus={()=>{
+                      const wordsAtCell=puzzle.ws.filter(w=>cells(w).some(x=>x.r===r&&x.c===c));
+                      if(wordsAtCell.length===0)return;
+                      const otherWord=selectedWord&&wordsAtCell.some(w=>w.n===selectedWord.n&&w.d===selectedWord.d)
+                        ?wordsAtCell.find(w=>!(w.n===selectedWord.n&&w.d===selectedWord.d))
+                        :null;
+                      setSelectedWord(otherWord||wordsAtCell[0]);
+                    }}
                     disabled={isSolved} className="w-full h-full text-center font-bold bg-transparent outline-none uppercase"
-                    style={{fontSize:Math.max(10,cSz*0.48),paddingTop:cell.n>0?cSz*0.15:0,color:ck[k]==="hint"?"#b45309":"#1c1917",caretColor:"#0284c7"}}/>
+                    style={{fontSize:Math.max(10,cellSize*0.48),paddingTop:cell.n>0?cellSize*0.15:0,color:cellChecks[k]==="hint"?"#b45309":"#1c1917",caretColor:"#0284c7"}}/>
                 </div>)
               })
             )}
           </div>
         </div>
 
-        {sw&&!sv.has(sw.n)&&<div className="bg-sky-50 border border-sky-200 rounded-xl p-2.5 my-2 flex items-start gap-2 no-print">
-          <span className="bg-sky-600 text-white text-xs font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">{sw.n}{sw.d==="across"?"→":"↓"}</span>
-          <p className="text-xs text-sky-900 flex-1 leading-relaxed">{sw.cl}</p>
-          <button onClick={()=>hint(sw)} className="text-sm px-2 py-1 bg-amber-50 border border-amber-300 rounded-lg hover:bg-amber-100 shrink-0">💡</button>
-          <button onClick={()=>chk(sw)} className="text-sm px-2 py-1 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 shrink-0 font-bold text-emerald-700">✓</button>
+        {selectedWord&&!solvedWords.has(selectedWord.n)&&<div className="bg-sky-50 border border-sky-200 rounded-xl p-2.5 my-2 flex items-start gap-2 no-print">
+          <span className="bg-sky-600 text-white text-xs font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">{selectedWord.n}{selectedWord.d==="across"?"→":"↓"}</span>
+          <p className="text-xs text-sky-900 flex-1 leading-relaxed">{selectedWord.cl}</p>
+          <button onClick={()=>hint(selectedWord)} className="text-sm px-2 py-1 bg-amber-50 border border-amber-300 rounded-lg hover:bg-amber-100 shrink-0">💡</button>
+          <button onClick={()=>checkWord(selectedWord)} className="text-sm px-2 py-1 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 shrink-0 font-bold text-emerald-700">✓</button>
         </div>}
 
         {["across","down"].map(dir=>{
           const label=dir==="across"?"MENDATAR →":"MENURUN ↓";
-          const list=dir==="across"?pz.ac:pz.dn;
+          const list=dir==="across"?puzzle.ac:puzzle.dn;
           return(<div key={dir} className="bg-white rounded-xl border border-stone-200 mb-2 overflow-hidden">
             <div className="bg-stone-100 px-3 py-1.5 border-b border-stone-200"><span className="text-xs font-bold text-stone-500 tracking-wider">{label}</span></div>
             <div className="divide-y divide-stone-100 max-h-56 overflow-y-auto">
-              {list.map(w=>{const isSv=sv.has(w.n);const isSel=sw?.n===w.n&&sw?.d===w.d;return(
+              {list.map(w=>{const isSv=solvedWords.has(w.n);const isSel=selectedWord?.n===w.n&&selectedWord?.d===w.d;return(
                 <div key={`${w.d}-${w.n}`} className={`flex items-start gap-1.5 px-3 py-1.5 cursor-pointer transition-colors ${isSel?"bg-sky-50":"hover:bg-stone-50"} ${isSv?"opacity-40":""}`}
-                  onClick={()=>{setSw(w);setTimeout(()=>rr.current[`${w.row}-${w.col}`]?.focus(),30)}}>
+                  onClick={()=>{setSelectedWord(w);setTimeout(()=>inputRefs.current[`${w.row}-${w.col}`]?.focus(),30)}}>
                   <span className="text-xs font-bold text-stone-400 w-6 shrink-0 text-right">{w.n}.</span>
                   <p className={`text-xs leading-relaxed flex-1 ${isSv?"line-through text-stone-400":"text-stone-700"}`}>{w.cl}</p>
                   {!isSv&&<div className="flex gap-1 shrink-0 no-print">
                     <button onClick={e=>{e.stopPropagation();hint(w)}} className="text-xs text-amber-500 hover:text-amber-700">💡</button>
-                    <button onClick={e=>{e.stopPropagation();chk(w)}} className="text-xs text-emerald-600 hover:text-emerald-800 font-bold">✓</button>
+                    <button onClick={e=>{e.stopPropagation();checkWord(w)}} className="text-xs text-emerald-600 hover:text-emerald-800 font-bold">✓</button>
                   </div>}
                   {isSv&&<span className="text-emerald-500 text-xs font-bold">✓ {w.w}</span>}
                 </div>
