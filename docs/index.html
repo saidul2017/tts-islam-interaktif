@@ -46,6 +46,28 @@ const PZ={
 
 const fmt=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
 
+const GOOGLE_SCRIPT_URL = ''; // Isi dengan URL Google Apps Script Web App Anda / Fill in your Google Apps Script Web App URL
+
+async function submitScore(data) {
+  if (!GOOGLE_SCRIPT_URL) return 'local';
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return 'sent';
+  } catch (err) { console.warn('Gagal mengirim skor:', err); return 'error'; }
+}
+
+async function fetchLeaderboard() {
+  if (!GOOGLE_SCRIPT_URL) return null;
+  try {
+    const res = await fetch(GOOGLE_SCRIPT_URL);
+    return await res.json();
+  } catch (err) { console.warn('Gagal mengambil leaderboard:', err); return null; }
+}
+
 function App(){
   const[pid,setPid]=useState(null);
   const[ug,setUg]=useState({});
@@ -57,15 +79,32 @@ function App(){
   const[sw,setSw]=useState(null);
   const[ck,setCk]=useState({});
   const[done,setDone]=useState(false);
+  const[name,setName]=useState(()=>localStorage.getItem('tts_name')||'');
+  const[nim,setNim]=useState(()=>localStorage.getItem('tts_nim')||'');
+  const[showLb,setShowLb]=useState(false);
+  const[lbData,setLbData]=useState([]);
+  const[lbLoading,setLbLoading]=useState(false);
+  const[lbFilter,setLbFilter]=useState('all');
+  const[scoreStatus,setScoreStatus]=useState(null);
   const rr=useRef({});
   const tr=useRef(null);
 
   useEffect(()=>{if(on){tr.current=setInterval(()=>setSec(t=>t+1),1000)}return()=>clearInterval(tr.current)},[on]);
+  useEffect(()=>{localStorage.setItem('tts_name',name)},[name]);
+  useEffect(()=>{localStorage.setItem('tts_nim',nim)},[nim]);
+
+  const openLeaderboard=async()=>{
+    setShowLb(true);setLbLoading(true);
+    const remote=await fetchLeaderboard();
+    if(remote){setLbData(remote);}
+    else{const loc=JSON.parse(localStorage.getItem('tts_scores')||'[]');setLbData(loc);}
+    setLbLoading(false);
+  };
 
   const go=(id)=>{
     const p=PZ[id];const u={};
     for(let r=0;r<p.R;r++)for(let c=0;c<p.C;c++)if(p.g[r][c].a)u[`${r}-${c}`]="";
-    setPid(id);setUg(u);setSec(0);setOn(true);setSc(0);setSv(new Set());setHt(new Set());setSw(null);setCk({});setDone(false);
+    setPid(id);setUg(u);setSec(0);setOn(true);setSc(0);setSv(new Set());setHt(new Set());setSw(null);setCk({});setDone(false);setScoreStatus(null);
   };
 
   const pz=pid?PZ[pid]:null;
@@ -88,7 +127,15 @@ function App(){
       const ns=new Set(sv);ns.add(w.n);setSv(ns);
       const base=w.w.length*10;const pen=ht.has(w.n)?Math.floor(base*0.5):0;
       setSc(s=>s+base-pen);
-      if(ns.size===tot){setOn(false);setDone(true)}
+      if(ns.size===tot){
+        setOn(false);setDone(true);
+        const finalSc=sc+base-pen;
+        const sd={nama:name,nim:nim,puzzle:pz.title,skor:finalSc,waktu:fmt(sec),hints:ht.size,benar:ns.size,total:tot};
+        const loc=JSON.parse(localStorage.getItem('tts_scores')||'[]');
+        localStorage.setItem('tts_scores',JSON.stringify([{...sd,timestamp:new Date().toISOString()},...loc].slice(0,100)));
+        setScoreStatus('sending');
+        submitScore(sd).then(s=>setScoreStatus(s));
+      }
     }
   };
 
@@ -130,22 +177,37 @@ function App(){
   if(!pid)return(
     <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
       <div className="max-w-sm w-full">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-stone-800 text-white mb-4" style={{fontSize:18,fontFamily:"serif",fontWeight:"bold",letterSpacing:2,lineHeight:1.2}}>
             <div className="text-center"><div style={{fontSize:11,opacity:0.6}}>☪</div><div>TTS</div></div>
           </div>
           <h1 className="text-2xl font-bold text-stone-800">Teka-Teki Silang</h1>
           <p className="text-sm text-stone-400 mt-1">Khulafaur Rasyidin & Peradaban Islam</p>
         </div>
+
+        <div className="bg-white rounded-2xl border border-stone-200 p-4 mb-4">
+          <p className="text-xs font-semibold text-stone-500 mb-3">👤 Data Pemain</p>
+          <input type="text" placeholder="Nama lengkap *" value={name} onChange={e=>setName(e.target.value)}
+            className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm text-stone-800 mb-2 outline-none focus:border-sky-400"/>
+          <input type="text" placeholder="NIM / ID (opsional)" value={nim} onChange={e=>setNim(e.target.value)}
+            className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm text-stone-800 outline-none focus:border-sky-400"/>
+          {!name.trim()&&<p className="text-xs text-amber-600 mt-2">⚠ Isi nama terlebih dahulu untuk mulai bermain.</p>}
+        </div>
+
         {[1,2].map(id=>{const p=PZ[id];return(
-          <button key={id} onClick={()=>go(id)} className="w-full mb-3 text-left p-5 bg-white rounded-2xl border border-stone-200 hover:border-stone-400 hover:shadow-lg transition-all active:scale-[0.98]">
+          <button key={id} onClick={()=>name.trim()&&go(id)} className={`w-full mb-3 text-left p-5 bg-white rounded-2xl border transition-all ${name.trim()?"border-stone-200 hover:border-stone-400 hover:shadow-lg active:scale-[0.98]":"border-stone-100 opacity-50 cursor-not-allowed"}`}>
             <div className="flex items-center justify-between">
               <div><div className="font-bold text-stone-800">{p.title}</div><div className="text-xs text-stone-400 mt-1">{p.sub}</div></div>
               <div className="text-right"><div className="text-2xl font-bold text-stone-300">{p.ws.length}</div><div className="text-xs text-stone-400">kata</div></div>
             </div>
           </button>
         )})}
-        <div className="mt-6 p-4 bg-white rounded-2xl border border-stone-200">
+
+        <button onClick={openLeaderboard} className="w-full mb-4 py-2.5 bg-amber-50 border border-amber-200 rounded-2xl text-sm font-semibold text-amber-700 hover:bg-amber-100 transition-colors">
+          🏆 Leaderboard
+        </button>
+
+        <div className="p-4 bg-white rounded-2xl border border-stone-200">
           <p className="text-xs font-semibold text-stone-500 mb-3 text-center">Cara Bermain</p>
           <div className="grid grid-cols-2 gap-3 text-xs text-stone-500">
             <div className="flex items-start gap-2"><span className="text-base">⏱</span><div><b>Timer</b><br/>Waktu otomatis</div></div>
@@ -156,6 +218,47 @@ function App(){
         </div>
         <p className="text-center text-xs text-stone-300 mt-4">v1.0 — 70 istilah sejarah & peradaban Islam</p>
       </div>
+
+      {showLb&&<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={e=>{if(e.target===e.currentTarget)setShowLb(false)}}>
+        <div className="bg-white rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200">
+            <h2 className="font-bold text-stone-800">🏆 Leaderboard</h2>
+            <button onClick={()=>setShowLb(false)} className="text-stone-400 hover:text-stone-700 text-xl leading-none">×</button>
+          </div>
+          <div className="flex gap-2 px-4 py-2 border-b border-stone-100">
+            {['all','1','2'].map(f=>(
+              <button key={f} onClick={()=>setLbFilter(f)}
+                className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${lbFilter===f?"bg-stone-800 text-white":"bg-stone-100 text-stone-500 hover:bg-stone-200"}`}>
+                {f==='all'?'Semua':f==='1'?'TTS I':'TTS II'}
+              </button>
+            ))}
+          </div>
+          <div className="overflow-y-auto flex-1 px-4 py-2">
+            {lbLoading?(
+              <div className="text-center py-10 text-stone-400 text-sm">Memuat data…</div>
+            ):(()=>{
+              const filtered=(lbData||[]).filter(r=>lbFilter==='all'||((r.Puzzle||r.puzzle||'').includes(`TTS ${lbFilter}`)));
+              const rows=filtered.slice().sort((a,b)=>Number(b.Skor||b.skor||0)-Number(a.Skor||a.skor||0));
+              const emptyMsg=GOOGLE_SCRIPT_URL?"Belum ada data.":"Mode offline — skor hanya tersimpan di browser ini.";
+              if(!rows.length)return(<div className="text-center py-10 text-stone-400 text-sm">{emptyMsg}</div>);
+              return(<table className="w-full text-xs">
+                <thead><tr className="text-stone-400 text-left border-b border-stone-100">
+                  <th className="py-1.5 w-6">#</th><th className="py-1.5">Nama</th><th className="py-1.5">Puzzle</th><th className="py-1.5 text-right">Skor</th><th className="py-1.5 text-right">Waktu</th>
+                </tr></thead>
+                <tbody>{rows.map((r,i)=>(
+                  <tr key={i} className="border-b border-stone-50">
+                    <td className="py-1.5 text-stone-400">{i+1}</td>
+                    <td className="py-1.5 font-medium text-stone-700 truncate max-w-[100px]">{r.Nama||r.nama||'—'}</td>
+                    <td className="py-1.5 text-stone-500 truncate max-w-[70px]">{(r.Puzzle||r.puzzle||'').replace('TTS ','')}</td>
+                    <td className="py-1.5 text-right font-bold text-emerald-700">{r.Skor||r.skor}</td>
+                    <td className="py-1.5 text-right text-stone-400">{r.Waktu||r.waktu}</td>
+                  </tr>
+                ))}</tbody>
+              </table>);
+            })()}
+          </div>
+        </div>
+      </div>}
     </div>
   );
 
@@ -167,7 +270,7 @@ function App(){
       <div className="bg-stone-800 text-white px-3 py-2 sticky top-0 z-20 shadow-lg no-print">
         <div className="flex items-center justify-between max-w-xl mx-auto">
           <button onClick={()=>{setPid(null);setOn(false)}} className="text-xs text-stone-400 hover:text-white">← Menu</button>
-          <span className="text-xs text-stone-400 truncate mx-2">{pz.title}</span>
+          <div className="text-center"><span className="text-xs text-stone-400 truncate">{pz.title}</span>{name&&<span className="block text-xs text-stone-300">👤 {name}</span>}</div>
           <div className="font-mono font-bold text-lg tabular-nums">{fmt(sec)}</div>
         </div>
         <div className="flex items-center gap-2 max-w-xl mx-auto mt-1">
@@ -183,6 +286,12 @@ function App(){
         <div className="font-bold text-emerald-800 text-lg">Alhamdulillah, Selesai!</div>
         <div className="text-sm text-emerald-700 mt-2">Waktu: <b>{fmt(sec)}</b> — Skor: <b>{sc}</b></div>
         <div className="text-xs text-emerald-600 mt-1">{ht.size===0?"Sempurna tanpa bantuan! 🌟":ht.size<=3?"Sangat baik!":"Terus belajar!"}</div>
+        <div className="text-xs mt-2">
+          {scoreStatus==='sending'&&<span className="text-stone-400">Mengirim skor…</span>}
+          {scoreStatus==='sent'&&<span className="text-emerald-600 font-medium">✓ Skor terkirim ke Google Sheets</span>}
+          {scoreStatus==='local'&&<span className="text-sky-600 font-medium">📥 Skor tersimpan lokal</span>}
+          {scoreStatus==='error'&&<span className="text-amber-600 font-medium">📥 Skor tersimpan lokal (gagal kirim)</span>}
+        </div>
         <button onClick={()=>{setPid(null);setOn(false)}} className="mt-3 bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700">Kembali ke Menu</button>
       </div>}
 
