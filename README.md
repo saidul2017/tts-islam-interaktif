@@ -97,6 +97,70 @@ Edit variabel `RAW` di dalam `docs/index.html`. Format data:
 
 Aplikasi menggunakan Tailwind CSS. Ganti class warna (`stone-`, `sky-`, `emerald-`) sesuai preferensi.
 
+## 📊 Setup Google Sheets (Opsional)
+
+Untuk menyimpan skor pemain ke Google Sheets (leaderboard online):
+
+1. **Buat Google Spreadsheet baru** di [sheets.google.com](https://sheets.google.com)
+2. **Tambahkan header** di baris pertama (kolom A–I):
+   ```
+   Timestamp | Nama | NIM | Puzzle | Skor | Waktu | Hints | Benar | Total
+   ```
+3. **Buka Extensions → Apps Script**
+4. **Hapus kode default**, lalu paste kode berikut:
+
+```javascript
+// Google Apps Script Code - deploy sebagai Web App
+const SHEET_ID = 'YOUR_SPREADSHEET_ID'; // Ganti dengan ID spreadsheet Anda
+
+function doGet(e) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const rows = data.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = row[i]);
+    return obj;
+  });
+  return ContentService.createTextOutput(JSON.stringify(rows))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
+  const data = JSON.parse(e.postData.contents);
+  sheet.appendRow([
+    new Date().toISOString(),
+    data.nama,
+    data.nim || '',
+    data.puzzle,
+    data.skor,
+    data.waktu,
+    data.hints,
+    data.benar,
+    data.total
+  ]);
+  return ContentService.createTextOutput(JSON.stringify({status: 'ok'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+```
+
+5. **Ganti** `YOUR_SPREADSHEET_ID` dengan ID spreadsheet Anda (bagian URL antara `/d/` dan `/edit`, contoh: `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms`)
+6. **Deploy sebagai Web App:**
+   - Klik **Deploy → New deployment**
+   - Tipe: **Web app**
+   - Execute as: **Me**
+   - Who has access: **Anyone**
+   - Klik **Deploy**, lalu **Authorize**
+7. **Copy URL Web App** yang muncul
+8. **Buka `docs/index.html`**, isi variabel `GOOGLE_SCRIPT_URL`:
+   ```javascript
+   const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/...YOUR_URL.../exec';
+   ```
+9. **Push ulang ke GitHub** — skor akan otomatis tersimpan ke spreadsheet
+
+> **Tanpa konfigurasi:** Skor tetap tersimpan di `localStorage` browser pemain dan bisa dilihat di Leaderboard mode offline.
+
 ## 📄 Lisensi
 
 Bebas digunakan untuk keperluan pendidikan. Dibuat dengan Claude AI.
