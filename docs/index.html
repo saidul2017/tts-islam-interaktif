@@ -146,6 +146,7 @@ function App(){
   const total=pz?pz.words.length:0;
 
   useEffect(()=>{
+    clearInterval(tRef.current);
     if(running&&!paused) tRef.current=setInterval(()=>setSecs(t=>t+1),1000);
     return()=>clearInterval(tRef.current);
   },[running,paused]);
@@ -155,6 +156,16 @@ function App(){
     window.addEventListener("resize",h);
     return()=>window.removeEventListener("resize",h);
   },[]);
+
+  useEffect(()=>{
+    if(!done||!pz) return;
+    try{
+      const entry={nama:nama.trim(),nim:nim.trim(),puzzle:pz.label,skor:score,waktu:fmt(secs),hints:hinted.size,totalKata:total,kataBenar:solved.size,timestamp:new Date().toISOString()};
+      const prev=JSON.parse(localStorage.getItem('tts_scores')||'[]');
+      prev.push(entry);
+      localStorage.setItem('tts_scores',JSON.stringify(prev.slice(-100)));
+    }catch(e){}
+  },[done]);
 
   const selSet=useMemo(()=>{
     if(!active) return new Set();
@@ -265,6 +276,21 @@ function App(){
     setScreen("leaderboard");
     setLbPuzzle(puzzleLabel||null);
     setLbLoading(true);
+    if(!SCRIPT_URL){
+      try{
+        const all=JSON.parse(localStorage.getItem('tts_scores')||'[]');
+        const grouped={};
+        all.forEach(e=>{
+          if(puzzleLabel&&e.puzzle!==puzzleLabel) return;
+          if(!grouped[e.puzzle]) grouped[e.puzzle]=[];
+          grouped[e.puzzle].push(e);
+        });
+        for(const p in grouped){grouped[p].sort((a,b)=>b.skor-a.skor);grouped[p]=grouped[p].slice(0,20);}
+        setLbData(grouped);
+      }catch(e){setLbData({});}
+      setLbLoading(false);
+      return;
+    }
     const res=await fetchLeaderboard(puzzleLabel);
     setLbData(res.success?res.leaderboard:null);
     setLbLoading(false);
@@ -429,8 +455,8 @@ function App(){
 
         {!hasApi&&(
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-center">
-            <p className="text-sm text-amber-800 font-medium">Mode Offline</p>
-            <p className="text-xs text-amber-600 mt-1">Google Sheets belum dikonfigurasi. Lihat panduan setup di README.</p>
+            <p className="text-sm text-amber-800 font-medium">Mode Offline — Data Lokal</p>
+            <p className="text-xs text-amber-600 mt-1">Menampilkan skor tersimpan di perangkat ini.</p>
           </div>
         )}
 
@@ -543,10 +569,9 @@ function App(){
         <div className="flex gap-2 mb-4">
           <button onClick={()=>openLeaderboard(null)}
             className={`flex-1 p-4 rounded-2xl border transition-all text-center
-              ${hasApi?"bg-amber-50 border-amber-200 hover:border-amber-400 hover:shadow-lg":"bg-stone-100 border-stone-200 opacity-60 cursor-not-allowed"}`}
-            disabled={!hasApi}>
+              ${hasApi?"bg-amber-50 border-amber-200 hover:border-amber-400 hover:shadow-lg":"bg-stone-100 border-stone-200 hover:border-stone-400 hover:shadow-lg"}`}>
             <span className="text-sm font-medium text-amber-800">🏆 Papan Skor</span>
-            {!hasApi&&<span className="block text-xs text-stone-400 mt-0.5">Aktifkan Google Sheets dulu</span>}
+            {!hasApi&&<span className="block text-xs text-stone-400 mt-0.5">Data lokal tersedia</span>}
           </button>
           <button onClick={()=>setShowSetup(true)}
             className={`p-4 rounded-2xl border transition-all text-center shrink-0
@@ -694,10 +719,9 @@ function App(){
           )}
 
           {!hasApi&&(
-            <div className="mt-3 bg-sky-50 border border-sky-200 rounded-xl p-3 cursor-pointer hover:bg-sky-100"
-              onClick={()=>{setDone(false);setShowSetup(true)}}>
-              <p className="text-xs text-sky-700 font-medium">📊 Ingin skor tersimpan otomatis?</p>
-              <p className="text-xs text-sky-500 mt-0.5">Hubungkan ke Google Sheets → Klik untuk panduan setup</p>
+            <div className="mt-3 bg-sky-50 border border-sky-200 rounded-xl p-3">
+              <p className="text-xs text-sky-700 font-medium">📥 Skor tersimpan lokal</p>
+              <p className="text-xs text-sky-500 mt-0.5 cursor-pointer hover:underline" onClick={()=>{setDone(false);setShowSetup(true)}}>Hubungkan ke Google Sheets untuk skor cloud →</p>
             </div>
           )}
 
