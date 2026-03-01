@@ -4,9 +4,7 @@ Teka-Teki Silang (TTS) interaktif berbasis web untuk pembelajaran sejarah dan pe
 
 ## 🎮 Demo Langsung
 
-👉 **https://USERNAME.github.io/tts-islam-interaktif/**
-
-> Ganti `USERNAME` dengan username GitHub Anda setelah deploy.
+👉 **https://saidul2017.github.io/tts-islam-interaktif/**
 
 ## 📋 Konten
 
@@ -102,7 +100,7 @@ Teka-Teki Silang (TTS) interaktif berbasis web untuk pembelajaran sejarah dan pe
    - Source: **Deploy from a branch**
    - Branch: **main** → folder **/docs**
    - Klik **Save**
-4. Tunggu 1-2 menit, akses di `https://USERNAME.github.io/REPO-NAME/`
+4. Tunggu 1-2 menit, akses di `https://saidul2017.github.io/tts-islam-interaktif/`
 
 ### Cara Terminal:
 
@@ -111,7 +109,7 @@ git init
 git add .
 git commit -m "Initial commit - TTS Interaktif v2.1"
 git branch -M main
-git remote add origin https://github.com/USERNAME/tts-islam-interaktif.git
+git remote add origin https://github.com/saidul2017/tts-islam-interaktif.git
 git push -u origin main
 ```
 
